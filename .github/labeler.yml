@@ -1,0 +1,68 @@
+# Label for any changes in the root directory
+root:
+- changed-files:
+  - any-glob-to-any-file: '*'
+
+# Label for any changes in the documentation files
+Documentation:
+- changed-files:
+  - any-glob-to-any-file: '**/*.md'
+
+# Label for any changes in the Java source files
+Java:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/java/**/*.java'
+  - any-glob-to-any-file: 'src/test/java/**/*.java'
+
+# Label for any changes in the CSS files
+CSS:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/**/*.css'
+
+# Label for any changes in the HTML templates
+HTML:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/templates/**/*.html'
+
+# Label for any changes in the configuration files
+Config:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/application*.properties'
+  - any-glob-to-any-file: 'src/main/resources/logback-spring.xml'
+  - any-glob-to-any-file: 'src/tsconfig.json'
+  - any-glob-to-any-file: 'build.gradle'
+  - any-glob-to-any-file: 'src/main/java/com/tfg/infractory/config/**/*.java'
+
+# Label for any changes in the Docker-related files
+Docker:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/docker.css'
+  - any-glob-to-any-file: 'src/main/resources/templates/docker/**/*.html'
+  - any-glob-to-any-file: 'src/main/java/com/tfg/infractory/infrastructure/docker/**/*.java'
+
+# Label for any changes in the Nebula-related files
+Nebula:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/nebula-management.css'
+  - any-glob-to-any-file: 'src/main/resources/templates/nebula/**/*.html'
+  - any-glob-to-any-file: 'src/main/java/com/tfg/infractory/infrastructure/nebula/**/*.java'
+
+# Label for any changes in the SSH keys management files
+SSH:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/ssh-keys-management.css'
+  - any-glob-to-any-file: 'src/main/resources/templates/ssh-keys/**/*.html'
+  - any-glob-to-any-file: 'src/main/java/com/tfg/infractory/infrastructure/ssh/**/*.java'
+
+# Label for any changes in the secrets management files
+Secrets:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/secrets-management.css'
+  - any-glob-to-any-file: 'src/main/resources/templates/secrets/**/*.html'
+  - any-glob-to-any-file: 'src/main/java/com/tfg/infractory/infrastructure/secrets/**/*.java'
+
+# Label for any changes in the infrastructure creation files
+Infrastructure:
+- changed-files:
+  - any-glob-to-any-file: 'src/main/resources/static/css/infrastructure-creation.css'
+  - any-glob-to-any-file: 'src/main/resources/templates/infrastructure/**/*.html'

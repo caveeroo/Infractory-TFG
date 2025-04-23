@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Swarm Deployment'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/swarm-deployment.css}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="deployment-container">
+                    <!-- Alert messages -->
+                    <div th:if="${successMessage}" class="alert alert-success" role="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span th:text="${successMessage}"></span>
+                    </div>
+                    <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span th:text="${errorMessage}"></span>
+                    </div>
+
+                    <!-- Swarm Deployment Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Deploy Docker services and configurations to your Swarm cluster for scalable application management.')}">
+                    </div>
+
+                    <div class="deployment-cards">
+                        <!-- Deploy Configuration Card -->
+                        <div class="deployment-card">
+                            <div class="card-header">
+                                <h2><i class="fas fa-file-import"></i> Apply Configuration File to Services</h2>
+                            </div>
+                            <div class="card-body">
+                                <form th:action="@{/swarm/deploy/config}" method="post">
+                                    <!-- Configuration Selection Section -->
+                                    <div class="form-section">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-file-code"></i> Select Configuration
+                                        </div>
+                                        <div class="form-group">
+                                            <select id="configId" name="configId" class="form-control" required>
+                                                <option value="" selected disabled>Choose a configuration</option>
+                                                <option th:each="config : ${configurations}" th:value="${config.id}"
+                                                    th:text="${config.name + ' [Target: ' + (config.targetPath ?: 'Not Set') + ']'}">
+                                                </option>
+                                            </select>
+                                            <div class="help-text">Select the configuration file (managed in Docker
+                                                Configs) to apply. Ensure the Target Path is set correctly.</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Target Selection Section -->
+                                    <div class="form-section">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-bullseye"></i> Deployment Target
+                                        </div>
+
+                                        <input type="hidden" id="targetTypeField" name="targetType" value="node">
+
+                                        <div class="target-selection">
+                                            <div class="target-option selected" data-target="node">
+                                                <i class="fas fa-server"></i> Specific Node
+                                            </div>
+                                            <div class="target-option" data-target="serverType">
+                                                <i class="fas fa-layer-group"></i> Server Type
+                                            </div>
+                                            <div class="target-option" data-target="tag">
+                                                <i class="fas fa-tag"></i> Service Tag
+                                            </div>
+                                        </div>
+
+                                        <div id="nodeTargetSection" class="target-section">
+                                            <div class="form-group">
+                                                <label for="nodeId">Select Node</label>
+                                                <select id="nodeId" name="nodeId" class="form-control">
+                                                    <option value="" selected disabled>Choose a node</option>
+                                                    <option th:each="node : ${nodes}" th:value="${node.id}"
+                                                        th:text="${node.hostname + ' (' + node.role + ')'}"></option>
+                                                </select>
+                                                <div class="help-text">Apply config to all services running on this
+                                                    specific node.</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="serverTypeTargetSection" class="target-section" style="display: none;">
+                                            <div class="form-group">
+                                                <label for="serverType">Select Server Type</label>
+                                                <select id="serverType" name="serverType" class="form-control">
+                                                    <option value="" selected disabled>Choose a server type</option>
+                                                    <option th:each="type : ${serverTypes}" th:value="${type}"
+                                                        th:text="${type}"></option>
+                                                </select>
+                                                <div class="help-text">Apply config to all services running on nodes of
+                                                    this server type.</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="tagTargetSection" class="target-section" style="display: none;">
+                                            <div class="form-group">
+                                                <label for="tag">Select Tag</label>
+                                                <select id="tag" name="tag" class="form-control">
+                                                    <option value="" selected disabled>Choose a tag</option>
+                                                    <option th:each="tag : ${tags}" th:value="${tag}" th:text="${tag}">
+                                                    </option>
+                                                </select>
+                                                <div class="help-text">Apply config to all services that have this tag.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="submit-btn">
+                                        <i class="fas fa-check-circle"></i> Apply Configuration
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Create Service Card -->
+                        <div class="deployment-card">
+                            <div class="card-header">
+                                <h2><i class="fas fa-cubes"></i> Create Service</h2>
+                            </div>
+                            <div class="card-body">
+                                <form id="createServiceForm" th:action="@{/swarm/service/create}" method="post">
+                                    <!-- Service Basics Section -->
+                                    <div class="form-section">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-info-circle"></i> Service Basics
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="serviceName">Service Name</label>
+                                                <input type="text" id="serviceName" name="serviceName"
+                                                    class="form-control" required>
+                                                <div class="help-text">A unique name for your service</div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="replicas">Replicas</label>
+                                                <input type="number" id="replicas" name="replicas" class="form-control"
+                                                    value="1" min="1">
+                                                <div class="help-text">Number of service instances to create</div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="imageId">Docker Image</label>
+                                            <select id="imageId" name="imageId" class="form-control" required>
+                                                <option value="" selected disabled>Choose an image</option>
+                                                <option th:each="image : ${images}" th:value="${image.id}"
+                                                    th:text="${image.name + ':' + image.tag}"></option>
+                                            </select>
+                                            <div class="help-text">The Docker image to use for this service</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Placement Constraints Section -->
+                                    <div class="form-section">
+                                        <div class="form-section-title">
+                                            <i class="fas fa-map-marker-alt"></i> Placement Constraints
+                                        </div>
+
+                                        <input type="hidden" id="placementType" name="placementType" value="node">
+                                        <input type="hidden" id="placementValue" name="placementValue">
+
+                                        <div class="target-selection">
+                                            <div class="target-option selected" data-placement="node">
+                                                <i class="fas fa-server"></i> Specific Node
+                                            </div>
+                                            <div class="target-option" data-placement="server_type">
+                                                <i class="fas fa-layer-group"></i> Server Type
+                                            </div>
+                                            <div class="target-option" data-placement="hostname">
+                                                <i class="fas fa-network-wired"></i> Hostname
+                                            </div>
+                                            <div class="target-option" data-placement="custom">
+                                                <i class="fas fa-code"></i> Custom
+                                            </div>
+                                        </div>
+
+                                        <div id="placement-node" class="placement-section">
+                                            <div class="form-group">
+                                                <label for="placementValueNode">Select Node</label>
+                                                <select id="placementValueNode" name="nodeId"
+                                                    class="form-control placement-value-field">
+                                                    <option value="" selected disabled>Choose a node</option>
+                                                    <option th:each="node : ${nodes}" th:value="${node.id}"
+                                                        th:text="${node.hostname + ' (' + node.role + ')'}"></option>
+                                                </select>
+                                                <div class="help-text">The specific node to run this service on</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="placement-server_type" class="placement-section"
+                                            style="display: none;">
+                                            <div class="form-group">
+                                                <label for="placementValueServerType">Select Server Type</label>
+                                                <select id="placementValueServerType"
+                                                    class="form-control placement-value-field">
+                                                    <option value="" selected disabled>Choose a server type</option>
+                                                    <option th:each="type : ${serverTypes}" th:value="${type}"
+                                                        th:text="${type}"></option>
+                                                </select>
+                                                <div class="help-text">Run on any node of this server type</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="placement-hostname" class="placement-section" style="display: none;">
+                                            <div class="form-group">
+                                                <label for="placementValueHostname">Enter Hostname</label>
+                                                <input type="text" id="placementValueHostname"
+                                                    class="form-control placement-value-field"
+                                                    placeholder="Enter hostname">
+                                                <div class="help-text">The hostname of the node to run on</div>
+                                            </div>
+                                        </div>
+
+                                        <div id="placement-custom" class="placement-section" style="display: none;">
+                                            <div class="form-group">
+                                                <label for="placementValueCustom">Custom Constraint</label>
+                                                <input type="text" id="placementValueCustom"
+                                                    class="form-control placement-value-field"
+                                                    placeholder="e.g., node.labels.type==frontend">
+                                                <div class="help-text">Format: key==value</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Advanced Options Toggle -->
+                                    <div class="advanced-toggle" id="advancedToggle">
+                                        <i class="fas fa-sliders-h"></i>
+                                        Advanced Options
+                                        <span class="toggle-icon" id="toggleIcon">▼</span>
+                                    </div>
+
+                                    <!-- Advanced Options Sections -->
+                                    <div id="advancedOptions" style="display: none;">
+                                        <!-- Port Publishing Section -->
+                                        <div class="form-section">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-network-wired"></i> Port Publishing
+                                            </div>
+                                            <div id="portsContainer" class="variable-container">
+                                                <div class="variable-row">
+                                                    <input type="number" name="publishedPort"
+                                                        placeholder="Host Port (e.g. 80)" class="form-control" min="1"
+                                                        max="65535">
+                                                    <input type="number" name="targetPort"
+                                                        placeholder="Container Port (e.g. 80)" class="form-control"
+                                                        min="1" max="65535">
+                                                    <select name="portMode" class="form-control">
+                                                        <option value="host">host</option>
+                                                        <option value="ingress">ingress</option>
+                                                    </select>
+                                                    <button type="button"
+                                                        class="btn-remove btn-small remove-port">✕</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" id="addPortBtn" class="btn-add btn-small">
+                                                <i class="fas fa-plus"></i> Add Port
+                                            </button>
+                                            <input type="hidden" id="publishedPorts" name="publishedPorts">
+                                        </div>
+
+                                        <!-- Environment Variables Section -->
+                                        <div class="form-section">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-tasks"></i> Environment Variables
+                                            </div>
+                                            <div id="envVarsContainer" class="variable-container">
+                                                <div class="variable-row">
+                                                    <input type="text" name="envKey0" placeholder="KEY"
+                                                        class="form-control">
+                                                    <input type="text" name="envValue0" placeholder="value"
+                                                        class="form-control">
+                                                    <button type="button"
+                                                        class="btn-remove btn-small remove-env-var">✕</button>
+                                                </div>
+                                            </div>
+                                            <button type="button" id="addEnvVarBtn" class="btn-add btn-small">
+                                                <i class="fas fa-plus"></i> Add Environment Variable
+                                            </button>
+                                        </div>
+
+                                        <!-- Tags Section -->
+                                        <div class="form-section">
+                                            <div class="form-section-title">
+                                                <i class="fas fa-tags"></i> Service Tags
+                                            </div>
+                                            <div class="form-group">
+                                                <div class="variable-row">
+                                                    <input type="text" id="tagInput" class="form-control"
+                                                        placeholder="Add a tag">
+                                                    <button type="button" id="addTagBtn"
+                                                        class="btn-add btn-small">Add</button>
+                                                </div>
+                                                <div class="help-text">Tags help with service organization and filtering
+                                                </div>
+                                                <div id="tagsContainer" class="tags-container"></div>
+                                                <input type="hidden" id="tagsInput" name="tags">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="submit-btn">
+                                        <i class="fas fa-plus-circle"></i> Create Service
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Deployment Toggle -->
+                    <div class="form-section">
+                        <div class="advanced-toggle" id="directDeployToggle">
+                            <i class="fas fa-terminal"></i>
+                            Direct Service Deployment
+                            <span class="toggle-icon">▼</span>
+                        </div>
+
+                        <!-- Direct Deployment Form (Hidden by Default) -->
+                        <div id="directDeploymentForm" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> This method uses Docker CLI commands directly for
+                                full control over service deployment.
+                            </div>
+
+                            <form id="directDeployForm">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="directServiceName">Service Name</label>
+                                        <input type="text" id="directServiceName" class="form-control" required>
+                                        <div class="help-text">A unique name for your service</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="directImageName">Image Name</label>
+                                        <input type="text" id="directImageName" class="form-control" required
+                                            placeholder="nginx:alpine">
+                                        <div class="help-text">Full image name with tag (e.g. nginx:alpine)</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="directPublishedPort">Published Port (Host)</label>
+                                        <input type="number" id="directPublishedPort" class="form-control" value="80"
+                                            min="1" max="65535">
+                                        <div class="help-text">Port exposed on the host</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="directTargetPort">Target Port (Container)</label>
+                                        <input type="number" id="directTargetPort" class="form-control" value="80"
+                                            min="1" max="65535">
+                                        <div class="help-text">Port inside the container</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="directPortMode">Port Mode</label>
+                                        <select id="directPortMode" class="form-control">
+                                            <option value="host">host</option>
+                                            <option value="ingress">ingress</option>
+                                        </select>
+                                        <div class="help-text">Port publishing mode</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="directReplicas">Replicas</label>
+                                        <input type="number" id="directReplicas" class="form-control" value="1" min="1">
+                                        <div class="help-text">Number of service instances</div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="directConstraint">Placement Constraint</label>
+                                    <input type="text" id="directConstraint" class="form-control"
+                                        placeholder="node.labels.type==frontend">
+                                    <div class="help-text">Optional: Format is key==value</div>
+                                </div>
+
+                                <button type="button" id="directDeployBtn" class="submit-btn">
+                                    <i class="fas fa-rocket"></i> Deploy Service
+                                </button>
+                            </form>
+
+                            <div id="directDeployResult" class="mt-3" style="display:none;">
+                                <div class="alert" role="alert">
+                                    <pre id="directDeployOutput"></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // Target type selection
+            const targetOptions = document.querySelectorAll('.target-option[data-target]');
+            const targetTypeField = document.getElementById('targetTypeField');
+            const targetSections = document.querySelectorAll('.target-section');
+
+            targetOptions.forEach(option => {
+                option.addEventListener('click', function () {
+                    // Update UI
+                    targetOptions.forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    // Update hidden field
+                    const targetType = this.getAttribute('data-target');
+                    targetTypeField.value = targetType;
+
+                    // Show/hide sections
+                    targetSections.forEach(section => {
+                        section.style.display = 'none';
+                    });
+
+                    document.getElementById(targetType + 'TargetSection').style.display = 'block';
+                });
+            });
+
+            // Placement type selection
+            const placementOptions = document.querySelectorAll('.target-option[data-placement]');
+            const placementTypeField = document.getElementById('placementType');
+            const placementValueField = document.getElementById('placementValue');
+            const placementSections = document.querySelectorAll('.placement-section');
+
+            placementOptions.forEach(option => {
+                option.addEventListener('click', function () {
+                    // Update UI
+                    placementOptions.forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+
+                    // Update hidden field
+                    const placementType = this.getAttribute('data-placement');
+                    placementTypeField.value = placementType;
+
+                    // Show/hide sections
+                    placementSections.forEach(section => {
+                        section.style.display = 'none';
+                    });
+
+                    document.getElementById('placement-' + placementType).style.display = 'block';
+
+                    // Clear the hidden value field
+                    placementValueField.value = '';
+                });
+            });
+
+            // Update placement value field when inputs change
+            document.querySelectorAll('.placement-value-field').forEach(field => {
+                field.addEventListener('change', function () {
+                    placementValueField.value = this.value;
+                });
+                field.addEventListener('input', function () {
+                    placementValueField.value = this.value;
+                });
+            });
+
+            // Port mapping handling
+            const portsContainer = document.getElementById('portsContainer');
+            const publishedPortsField = document.getElementById('publishedPorts');
+
+            function updatePortsValue() {
+                const portMappings = [];
+                const rows = portsContainer.querySelectorAll('.variable-row');
+
+                rows.forEach(row => {
+                    const publishedPort = row.querySelector('input[name="publishedPort"]').value;
+                    const targetPort = row.querySelector('input[name="targetPort"]').value;
+                    const mode = row.querySelector('select[name="portMode"]').value;
+
+                    if (publishedPort && targetPort) {
+                        portMappings.push(`${publishedPort}:${targetPort}:tcp:${mode}`);
+                    }
+                });
+
+                publishedPortsField.value = portMappings.join(',');
+            }
+
+            document.getElementById('addPortBtn').addEventListener('click', function () {
+                const newRow = document.createElement('div');
+                newRow.className = 'variable-row';
+                newRow.innerHTML = `
+                    <input type="number" name="publishedPort" placeholder="Host Port (e.g. 80)" class="form-control" min="1" max="65535">
+                    <input type="number" name="targetPort" placeholder="Container Port (e.g. 80)" class="form-control" min="1" max="65535">
+                    <select name="portMode" class="form-control">
+                        <option value="host">host</option>
+                        <option value="ingress">ingress</option>
+                    </select>
+                    <button type="button" class="btn-remove btn-small remove-port">✕</button>
+                `;
+                portsContainer.appendChild(newRow);
+
+                // Add event listeners for the new row
+                newRow.querySelector('.remove-port').addEventListener('click', function () {
+                    portsContainer.removeChild(newRow);
+                    updatePortsValue();
+                });
+
+                newRow.querySelectorAll('input, select').forEach(input => {
+                    input.addEventListener('change', updatePortsValue);
+                    input.addEventListener('input', updatePortsValue);
+                });
+            });
+
+            // Add event listeners to the initial port mapping row
+            document.querySelectorAll('.remove-port').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const inputs = this.closest('.variable-row').querySelectorAll('input');
+                    inputs.forEach(input => input.value = '');
+                    updatePortsValue();
+                });
+            });
+
+            portsContainer.querySelectorAll('input, select').forEach(input => {
+                input.addEventListener('change', updatePortsValue);
+                input.addEventListener('input', updatePortsValue);
+            });
+
+            // Initialize port values
+            updatePortsValue();
+
+            // Environment variables handling
+            let envVarCount = 1;
+
+            document.getElementById('addEnvVarBtn').addEventListener('click', function () {
+                const container = document.getElementById('envVarsContainer');
+                const newRow = document.createElement('div');
+                newRow.className = 'variable-row';
+                newRow.innerHTML = `
+                    <input type="text" name="envKey${envVarCount}" placeholder="KEY" class="form-control">
+                    <input type="text" name="envValue${envVarCount}" placeholder="value" class="form-control">
+                    <button type="button" class="btn-remove btn-small remove-env-var">✕</button>
+                `;
+                container.appendChild(newRow);
+                envVarCount++;
+
+                // Add event listener to the new remove button
+                newRow.querySelector('.remove-env-var').addEventListener('click', function () {
+                    container.removeChild(newRow);
+                });
+            });
+
+            // Add event listener to the initial remove button
+            document.querySelectorAll('.remove-env-var').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const inputs = this.closest('.variable-row').querySelectorAll('input');
+                    inputs.forEach(input => input.value = '');
+                });
+            });
+
+            // Tags handling
+            const tags = [];
+            const tagInput = document.getElementById('tagInput');
+            const tagsContainer = document.getElementById('tagsContainer');
+            const tagsInput = document.getElementById('tagsInput');
+
+            document.getElementById('addTagBtn').addEventListener('click', function () {
+                const tag = tagInput.value.trim();
+                if (tag && !tags.includes(tag)) {
+                    tags.push(tag);
+                    updateTagsDisplay();
+                    tagInput.value = '';
+                }
+            });
+
+            function updateTagsDisplay() {
+                tagsContainer.innerHTML = '';
+                tags.forEach((tag, index) => {
+                    const tagElement = document.createElement('div');
+                    tagElement.className = 'tag';
+                    tagElement.innerHTML = `${tag} <span class="tag-remove" data-index="${index}">×</span>`;
+                    tagsContainer.appendChild(tagElement);
+                });
+                tagsInput.value = JSON.stringify(tags);
+
+                // Add event listeners to remove tags
+                document.querySelectorAll('.tag-remove').forEach(span => {
+                    span.addEventListener('click', function () {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        tags.splice(index, 1);
+                        updateTagsDisplay();
+                    });
+                });
+            }
+
+            // Advanced options toggle
+            document.getElementById('advancedToggle').addEventListener('click', function () {
+                const advancedOptions = document.getElementById('advancedOptions');
+                const toggleIcon = document.getElementById('toggleIcon');
+
+                if (advancedOptions.style.display === 'none') {
+                    advancedOptions.style.display = 'block';
+                    toggleIcon.textContent = '▲';
+                    toggleIcon.classList.add('open');
+                } else {
+                    advancedOptions.style.display = 'none';
+                    toggleIcon.textContent = '▼';
+                    toggleIcon.classList.remove('open');
+                }
+            });
+
+            // Direct deployment toggle
+            document.getElementById('directDeployToggle').addEventListener('click', function () {
+                const form = document.getElementById('directDeploymentForm');
+                const icon = this.querySelector('.toggle-icon');
+
+                if (form.style.display === 'none') {
+                    form.style.display = 'block';
+                    icon.textContent = '▲';
+                    icon.classList.add('open');
+                } else {
+                    form.style.display = 'none';
+                    icon.textContent = '▼';
+                    icon.classList.remove('open');
+                }
+            });
+
+            // Direct deployment form handling
+            document.getElementById('directDeployBtn').addEventListener('click', function () {
+                const serviceName = document.getElementById('directServiceName').value;
+                const imageName = document.getElementById('directImageName').value;
+                const publishedPort = document.getElementById('directPublishedPort').value;
+                const targetPort = document.getElementById('directTargetPort').value;
+                const mode = document.getElementById('directPortMode').value;
+                const replicas = document.getElementById('directReplicas').value;
+                const constraint = document.getElementById('directConstraint').value;
+
+                if (!serviceName || !imageName) {
+                    alert('Please provide a service name and image name');
+                    return;
+                }
+
+                // Show loading state
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deploying...';
+
+                const resultDiv = document.getElementById('directDeployResult');
+                const outputPre = document.getElementById('directDeployOutput');
+                resultDiv.style.display = 'none';
+
+                // Build the request URL with parameters
+                const url = new URL(`${window.location.origin}/swarm/service/deploy-direct`);
+                url.searchParams.append('serviceName', serviceName);
+                url.searchParams.append('imageName', imageName);
+                url.searchParams.append('publishedPort', publishedPort);
+                url.searchParams.append('targetPort', targetPort);
+                url.searchParams.append('mode', mode);
+                url.searchParams.append('replicas', replicas);
+                if (constraint) {
+                    url.searchParams.append('constraint', constraint);
+                }
+
+                // Send the request
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Show the result
+                        resultDiv.style.display = 'block';
+                        outputPre.textContent = data.message || JSON.stringify(data);
+
+                        if (data.success) {
+                            resultDiv.querySelector('.alert').className = 'alert alert-success';
+                        } else {
+                            resultDiv.querySelector('.alert').className = 'alert alert-danger';
+                        }
+                    })
+                    .catch(error => {
+                        // Show error
+                        resultDiv.style.display = 'block';
+                        resultDiv.querySelector('.alert').className = 'alert alert-danger';
+                        outputPre.textContent = `Error: ${error.message}`;
+                    })
+                    .finally(() => {
+                        // Reset button
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-rocket"></i> Deploy Service';
+                    });
+            });
+
+            // Form submission - ensure all hidden fields are populated
+            document.getElementById('createServiceForm').addEventListener('submit', function (event) {
+                // Update ports value
+                updatePortsValue();
+
+                // Make sure placement value is set
+                if (!placementValueField.value) {
+                    const activePlacementType = placementTypeField.value;
+                    const activePlacementValue = document.querySelector(`#placement-${activePlacementType} .placement-value-field`).value;
+                    placementValueField.value = activePlacementValue;
+                }
+
+                // Validate form
+                const serviceName = document.getElementById('serviceName').value;
+                const imageId = document.getElementById('imageId').value;
+
+                if (!serviceName || !imageId) {
+                    event.preventDefault();
+                    alert('Please fill in all required fields (Service Name and Docker Image)');
+                }
+
+                // If node placement is selected, make sure a node is selected
+                if (placementTypeField.value === 'node' && !document.getElementById('placementValueNode').value) {
+                    event.preventDefault();
+                    alert('Please select a node for placement');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

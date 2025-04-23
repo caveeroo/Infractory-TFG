@@ -1,0 +1,124 @@
+.ssh-keys-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 1rem;
+}
+
+.category-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--dark);
+    padding: 1rem;
+    background-color: var(--light);
+    border-bottom: 1px solid var(--secondary);
+    border-radius: 12px 12px 0 0;
+}
+
+.ssh-keys-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.infrastructure-component {
+    background-color: var(--white);
+    border: 1px solid var(--secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    position: relative;
+}
+
+.infrastructure-component:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.component-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.component-details {
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+.btn-toolbar {
+    padding: 0.5rem;
+}
+
+.infra-btn {
+    color: white;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: var(--header);
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+.infra-btn:hover {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: white;
+    text-decoration: none;
+}
+
+.infra-btn.btn-danger {
+    background-color: var(--danger);
+}
+
+.delete-form {
+    margin-top: 1rem;
+}
+
+.ssh-key-form {
+    background-color: var(--white);
+    border: 1px solid var(--secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+
+.ssh-key-subtitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--secondary);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.ssh-key-fingerprint {
+    word-break: break-all;
+}
+
+@media (max-width: 767.98px) {
+    .ssh-keys-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ssh-key-form {
+        padding: 1rem;
+    }
+}

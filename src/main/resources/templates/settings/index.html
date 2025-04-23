@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Settings'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="content">
+                    <!-- Settings Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Configure application settings, provider integrations, and security options for your infrastructure management.')}">
+                    </div>
+
+                    <div th:replace="~{settings/general :: general} ?: _"></div>
+                    <div th:replace="~{settings/security :: security} ?: _"></div>
+                    <div th:replace="~{settings/notifications :: notifications} ?: _"></div>
+                    <div th:replace="~{settings/integrations :: integrations} ?: _"></div>
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Local Provider</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Local provider is always configured and ready to use.</p>
+                            <span class="badge bg-success">Configured</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+
+</html>

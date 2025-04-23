@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Node Details'">
+
+<head>
+    <th:block th:replace="~{fragments/head :: head}"></th:block>
+    <!-- Add Bootstrap CSS specifically for this page -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
+        integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
+    <link rel="stylesheet" th:href="@{/css/swarm.css}">
+    <!-- Removed Bootstrap JS from head -->
+</head>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="swarm-container">
+                    <!-- Alert messages -->
+                    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+                    <!-- Node information section -->
+                    <div class="swarm-grid">
+                        <!-- Node Details Card -->
+                        <div class="infrastructure-component">
+                            <h2 class="component-name">Node Information</h2>
+                            <div class="component-details">
+                                <table class="details-table">
+                                    <tr>
+                                        <th>Node ID:</th>
+                                        <td th:text="${node.nodeId}"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Hostname:</th>
+                                        <td th:text="${node.hostname}"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Address:</th>
+                                        <td th:text="${nodeAddr}"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Role:</th>
+                                        <td>
+                                            <span
+                                                th:class="${'status-badge ' + (node.role == 'manager' ? 'status-primary' : 'status-secondary')}"
+                                                th:text="${node.role}"></span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Status:</th>
+                                        <td>
+                                            <span
+                                                th:class="${'status-badge ' + (node.status == 'ready' ? 'status-success' : 'status-danger')}"
+                                                th:text="${node.status}"></span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Card -->
+                        <div class="infrastructure-component">
+                            <h2 class="component-name">Quick Actions</h2>
+                            <div class="component-details">
+                                <div class="action-buttons">
+                                    <a th:href="@{/swarm/deploy(targetNodeId=${node.id})}" class="infra-btn">Deploy
+                                        Config to Node</a>
+                                    <a th:href="@{/swarm/deploy(targetNodeId=${node.id})}" class="infra-btn">Create
+                                        Service on Node</a>
+                                </div>
+                                <p class="mt-2 text-muted">Node availability and removal are managed externally.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Services Section -->
+                    <div class="infrastructure-component full-width">
+                        <h2 class="component-name">Running Services</h2>
+                        <div class="component-details">
+                            <div th:if="${#lists.isEmpty(services)}" class="empty-state">
+                                No services running on this node.
+                            </div>
+                            <div th:unless="${#lists.isEmpty(services)}" class="services-grid">
+                                <div th:each="service : ${services}" class="service-card"
+                                    th:data-service-id="${service.id}">
+                                    <div class="service-header">
+                                        <h3 th:text="${service.serviceName}"></h3>
+                                        <span
+                                            th:class="${'status-badge ' + (service.status == 'running' ? 'status-success' : 'status-warning')}"
+                                            th:text="${service.status}"></span>
+                                    </div>
+                                    <div class="service-details">
+                                        <p
+                                            th:text="${service.dockerImage != null ? service.dockerImage.name + ':' + service.dockerImage.tag : 'N/A'}">
+                                        </p>
+                                        <div class="service-tags">
+                                            <span th:each="tag : ${service.tags}" class="tag" th:text="${tag}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="service-actions">
+                                        <button class="infra-btn small" data-action="inspect">Inspect</button>
+                                        <button class="infra-btn small warning" data-action="restart">Restart</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Node Logs Section -->
+                    <div class="infrastructure-component full-width">
+                        <div class="component-header">
+                            <h2 class="component-name">Node Inspection Details</h2>
+                            <button class="infra-btn small" id="refreshLogsBtn">Refresh Details</button>
+                        </div>
+                        <div class="component-details">
+                            <pre id="nodeLogs" class="logs-container">Loading details...</pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rest of the modals remain the same but with updated styling classes -->
+                <!-- ... existing modals ... -->
+            </main>
+        </div>
+    </div>
+
+    <!-- Service Inspection Modal -->
+    <div class="modal fade" id="serviceInspectModal" tabindex="-1" role="dialog"
+        aria-labelledby="serviceInspectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="serviceInspectModalLabel">Service Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="service-info">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Service Name:</th>
+                                <td id="modalServiceName"></td>
+                            </tr>
+                            <tr>
+                                <th>Service ID:</th>
+                                <td id="modalServiceId"></td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td id="modalServiceStatus"></td>
+                            </tr>
+                            <tr>
+                                <th>Docker Image:</th>
+                                <td id="modalServiceImage"></td>
+                            </tr>
+                            <tr>
+                                <th>Replicas:</th>
+                                <td id="modalServiceReplicas"></td>
+                            </tr>
+                        </table>
+
+                        <h6 class="mt-4">Environment Variables</h6>
+                        <div id="modalServiceEnvVars" class="code-block"></div>
+
+                        <h6 class="mt-4">Published Ports</h6>
+                        <div id="modalServicePorts" class="code-block"></div>
+
+                        <h6 class="mt-4">Tags</h6>
+                        <div id="modalServiceTags" class="tag-container"></div>
+
+                        <!-- Add this section for Logs -->
+                        <h6 class="mt-4">Recent Logs</h6>
+                        <pre id="modalServiceLogs" class="code-block logs-container">Loading logs...</pre>
+                        <!-- End of added section -->
+
+                        <h6 class="mt-4">Docker Inspect Output</h6>
+                        <pre id="modalServiceInspect" class="code-block"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" id="modalRestartService">Restart Service</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Load Bootstrap JS here, AFTER jQuery (which is in head) and BEFORE custom scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ho+j7jyWK8fNQe+A12Hb8AhRq26LrZ/JpcUGGOn+Y7RsweNrtN/tE3MoK7ZeZDyx"
+        crossorigin="anonymous"></script>
+
+    <!-- Add required JavaScript -->
+    <script th:src="@{/js/node-details.js}"></script>
+</body>
+
+</html>

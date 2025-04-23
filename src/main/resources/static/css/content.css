@@ -1,0 +1,249 @@
+/* Main content */
+.main {
+    margin-left: 250px;
+    flex: 1;
+    box-sizing: border-box;
+    background-color: var(--bg-gray);
+    /* Light background for contrast */
+}
+
+.content {
+    background-color: var(--white);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Statistics Section */
+.statistics {
+    display: flex;
+    flex-grow: 1;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    /* Ensure they are in a single row */
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+
+.stat-card {
+    color: var(--dark);
+    /* Dark text */
+    padding: 1.5rem;
+    border-radius: 8px;
+    flex: 1;
+    /* Ensure equal width */
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: first baseline;
+    gap: 0.5rem;
+}
+
+.stat-card h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.stat-card .stat-value {
+    font-size: 3rem;
+    font-weight: 300;
+}
+
+.stat-card .stat-change {
+    font-size: 1rem;
+    color: darkgreen;
+    /* Green for positive changes */
+    margin-top: 0.5rem;
+}
+
+.stat-card .stat-change.negative {
+    color: darkred;
+    /* Red for negative changes */
+}
+
+/* Charts Section */
+.charts {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    background-color: var(--white);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.charts h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+}
+
+.chart-container {
+    background: var(--white);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex: 1;
+}
+
+.chart {
+    padding: 1rem;
+}
+
+.chart canvas {
+    width: 100% !important;
+    height: 300px !important;
+    /* Reduced height */
+}
+
+/* Button styles */
+button {
+    background-color: transparent;
+    color: var(--dark);
+    border: 1px solid var(--dark);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: var(--c1);
+    border-color: var(--c1);
+    color: var(--white);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header {
+        width: 100%;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        top: 0;
+    }
+
+    .sidebar .nav-link {
+        display: block;
+        width: 100%;
+    }
+
+    .main {
+        margin-left: 0;
+    }
+
+    footer {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .charts {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 576px) {
+    .sidebar {
+        display: none;
+    }
+
+    .main {
+        margin-left: 0;
+        padding: 1rem;
+    }
+
+    header {
+        padding: 0.5rem;
+        font-size: 1.2rem;
+    }
+
+    .stat-card {
+        flex: 1 1 100%;
+    }
+}
+
+.filter-section {
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    display: inline-flex;
+}
+
+.input-group-prepend .input-group-text {
+    background-color: var(--white);
+    border-right: none;
+}
+
+.input-group-text {
+    border-right: none;
+}
+
+.form-control {
+    border-left: none;
+}
+
+.btn-outline-secondary {
+    border-left: none;
+}
+
+.input-group .form-control {
+    border-radius: 0;
+}
+
+.input-group .input-group-append .btn {
+    border-radius: 0;
+}
+
+.input-group .input-group-prepend .input-group-text {
+    border-radius: 0;
+    background-color: transparent;
+}
+
+.stat-1 {
+    background-color: var(--c1);
+}
+
+.stat-2 {
+    background-color: var(--c2);
+}
+
+.stat-3 {
+    background-color: var(--c3);
+}
+
+.stat-4 {
+    background-color: var(--c4);
+}
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 500;
+    color: var(--dark);
+    margin: 0;
+}
+
+.stat-change {
+    font-size: 1rem;
+    color: var(--c1);
+}
+
+.stat-change.negative {
+    color: darkred;
+}
+
+#hitsChart,
+#lootChart {
+    height: 300px;
+    width: 100%;
+}
+
+.charts-section {
+    display: flex;
+    justify-content: space-between;
+}

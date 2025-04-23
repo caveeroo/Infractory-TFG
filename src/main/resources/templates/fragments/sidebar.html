@@ -1,0 +1,67 @@
+<nav class="sidebar" th:fragment="sidebar">
+    <div class="sidebar-header">
+        <h1 class="sidebar-title">Infractory</h1>
+    </div>
+    <ul class="sidebar-menu">
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/' ? 'active':''}" th:href="@{/}">
+                <i class="fas fa-home"></i> <span>Dashboard</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/infrastructure' ? 'active':''}"
+                th:href="@{/infrastructure}">
+                <i class="fas fa-network-wired"></i> <span>Infrastructure</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/instances/create' ? 'active':''}"
+                th:href="@{/instances/create}">
+                <i class="fas fa-plus-circle"></i> <span>Create Instance</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/secrets' ? 'active':''}" th:href="@{/secrets}">
+                <i class="fas fa-key"></i> <span>Secret Management</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/ssh-keys' ? 'active':''}" th:href="@{/ssh-keys}">
+                <i class="fas fa-key"></i> <span>SSH Keys</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/nebula' ? 'active':''}" th:href="@{/nebula}">
+                <i class="fas fa-project-diagram"></i> <span>Nebula</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/swarm' ? 'active':''}" th:href="@{/swarm}">
+                <i class="fab fa-docker"></i> <span>Docker Swarm</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/swarm/deploy' ? 'active':''}"
+                th:href="@{/swarm/deploy}">
+                <i class="fas fa-rocket"></i> <span>Swarm Deployment</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/docker/images' ? 'active':''}"
+                th:href="@{/docker/images}">
+                <i class="fab fa-docker"></i> <span>Docker Images</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/docker/configs' ? 'active':''}"
+                th:href="@{/docker/configs}">
+                <i class="fas fa-cog"></i> <span>Docker Configs</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" th:classappend="${servletPath == '/settings' ? 'active':''}" th:href="@{/settings}">
+                <i class="fas fa-wrench"></i> <span>Settings</span>
+            </a>
+        </li>
+    </ul>
+</nav>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Create Nebula'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/nebula-management.css}">
+<style>
+    .role-buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+    }
+
+    .role-button {
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 0.25rem 0.6rem;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .role-button:hover {
+        background-color: #d6d8db;
+    }
+
+    .role-button.selected {
+        background-color: #0069ff;
+        color: white;
+        border-color: #0056d6;
+    }
+
+    .selected-roles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-top: 0.5rem;
+    }
+
+    .selected-role-tag {
+        background-color: #0069ff;
+        color: white;
+        border-radius: 3px;
+        padding: 0.2rem 0.4rem;
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+    .remove-role {
+        margin-left: 0.3rem;
+        cursor: pointer;
+    }
+
+    .hidden-input {
+        display: none;
+    }
+
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        color: #212529;
+    }
+
+    .help-text {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.2rem;
+    }
+
+    /* Grid layout styles */
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group {
+        margin-bottom: 0.75rem;
+    }
+
+    .full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-control {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.95rem;
+    }
+
+    .nebula-container {
+        padding: 1rem;
+    }
+
+    .nebula-container h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .nebula-container .lead {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="nebula-container">
+                    <h1 class="mb-2">Create Nebula Configuration</h1>
+                    <p class="lead">Configure your Nebula VPN with the options below.</p>
+
+                    <div class="infrastructure-component nebula-form">
+                        <!-- 
+                            IMPORTANT: This form uses comma-separated string inputs for Set<String> fields.
+                            The controller uses both PropertyEditors and direct string-to-set conversion 
+                            to properly handle these fields. Do not change the name attributes without
+                            updating the controller's @RequestParam annotations and PropertyEditor registrations.
+                        -->
+                        <form th:action="@{/nebula/create}" method="post" th:object="${nebulaConfig}">
+                            <!-- Network Type Section -->
+                            <div class="form-section">
+                                <div class="form-section-title">Network Type</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <div class="custom-control custom-switch">
+                                            <label class="custom-control-label" for="lighthouse">This is a Lighthouse
+                                                Node</label>
+                                            <input type="checkbox" class="custom-control-input" id="lighthouse"
+                                                name="lighthouse" th:field="*{lighthouse}">
+                                        </div>
+                                        <div class="help-text">A lighthouse serves as a central coordination point</div>
+                                    </div>
+
+                                    <div class="form-group" id="nonLighthouseFields">
+                                        <label for="lighthouseId">Select Lighthouse Network:</label>
+                                        <select class="form-control" id="lighthouseId" name="lighthouseId"
+                                            th:field="*{lighthouseId}">
+                                            <option value="">Select a Lighthouse</option>
+                                            <option th:each="lighthouse : ${lighthouses}" th:value="${lighthouse.id}"
+                                                th:text="${lighthouse.ip + '/' + lighthouse.subnet}">
+                                            </option>
+                                        </select>
+                                        <div class="help-text">The lighthouse network this node will connect to</div>
+                                    </div>
+                                </div>
+
+                                <div id="lighthouseFields" style="display: none;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="ip">IP Address:</label>
+                                            <input type="text" class="form-control" id="ip" name="ip" th:field="*{ip}"
+                                                placeholder="192.168.100.1">
+                                            <div class="help-text">The IP address for this lighthouse node</div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="subnet">Subnet:</label>
+                                            <input type="number" class="form-control" id="subnet" name="subnet" min="0"
+                                                max="32" th:field="*{subnet}" placeholder="24">
+                                            <div class="help-text">The subnet mask (e.g. 24 for /24 network)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Combined Lighthouse IPs and Roles Section -->
+                            <div class="form-section">
+                                <div class="form-row">
+                                    <!-- Lighthouse IPs Column -->
+                                    <div class="form-group">
+                                        <div class="form-section-title">Lighthouse IPs</div>
+                                        <label for="lighthouseIpsString">Lighthouse IPs:</label>
+                                        <input type="text" class="form-control" id="lighthouseIpsString"
+                                            name="lighthouseIpsString" placeholder="192.168.100.1, 192.168.100.2">
+                                        <div class="help-text">Comma-separated list of lighthouse IP addresses</div>
+                                    </div>
+
+                                    <!-- Node Roles Column -->
+                                    <div class="form-group">
+                                        <div class="form-section-title">Node Roles</div>
+                                        <!-- Roles input (hidden, will be populated by JavaScript) -->
+                                        <input type="hidden" id="rolesString" name="rolesString">
+
+                                        <label>Select Roles:</label>
+                                        <div class="role-buttons-container" id="rolesButtonsContainer">
+                                            <button type="button" class="role-button"
+                                                data-role="swarm_manager">swarm_manager</button>
+                                            <button type="button" class="role-button"
+                                                data-role="swarm_worker">swarm_worker</button>
+                                            <button type="button" class="role-button" data-role="host">host</button>
+                                            <button type="button" class="role-button"
+                                                data-role="lighthouse">lighthouse</button>
+                                            <button type="button" class="role-button"
+                                                data-role="containers">containers</button>
+                                        </div>
+                                        <div class="selected-roles" id="selectedRoles"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Firewall Section -->
+                            <div class="form-section">
+                                <div class="form-section-title">Firewall Configuration</div>
+
+                                <!-- Allowed Roles input (hidden, will be populated by JavaScript) -->
+                                <input type="hidden" id="allowedRolesString" name="allowedRolesString">
+
+                                <div class="form-group">
+                                    <label>Select Allowed Roles to Connect:</label>
+                                    <div class="role-buttons-container" id="allowedRolesButtonsContainer">
+                                        <button type="button" class="role-button"
+                                            data-role="swarm_manager">swarm_manager</button>
+                                        <button type="button" class="role-button"
+                                            data-role="swarm_worker">swarm_worker</button>
+                                        <button type="button" class="role-button" data-role="host">host</button>
+                                        <button type="button" class="role-button"
+                                            data-role="lighthouse">lighthouse</button>
+                                        <button type="button" class="role-button"
+                                            data-role="containers">containers</button>
+                                    </div>
+                                    <div class="selected-roles" id="selectedAllowedRoles"></div>
+                                </div>
+
+                                <div class="form-group mt-3">
+                                    <button type="button" id="toggleCidrButton"
+                                        class="btn btn-sm btn-outline-secondary">
+                                        <span id="toggleCidrText">Show CIDR Restrictions</span>
+                                        <span id="toggleCidrIcon">▼</span>
+                                    </button>
+                                    <div class="help-text">Click to configure advanced network restrictions by CIDR
+                                        ranges</div>
+                                </div>
+
+                                <div class="form-group" id="cidrSection" style="display: none;">
+                                    <div class="mt-2 mb-2 p-2 border-left border-warning pl-3">
+                                        <div class="text-warning mb-2">⚠️ Advanced CIDR Configuration</div>
+                                        <input type="text" class="form-control" id="allowedCIDRsString"
+                                            name="allowedCIDRsString" placeholder="10.0.0.0/8, 192.168.0.0/16">
+                                        <div class="help-text">Comma-separated list of CIDR ranges allowed to connect
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Placement Constraints Section -->
+                            <div class="form-section">
+                                <div class="form-section-title">Placement Constraints</div>
+                                <div id="placementConstraints">
+                                    <div class="constraint-entry form-row">
+                                        <div class="form-group">
+                                            <input type="text" class="form-control constraint-key"
+                                                name="placementConstraints['key']" placeholder="Key">
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="text" class="form-control constraint-value"
+                                                name="placementConstraints['value']" placeholder="Value">
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" id="addConstraint" class="btn btn-sm btn-secondary mt-2">Add
+                                    Constraint</button>
+                                <span class="help-text ml-2">Optional constraints for placing this node</span>
+                            </div>
+
+                            <button type="submit" class="infra-btn">Create Nebula Configuration</button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // Lighthouse toggle functionality
+            const lighthouseCheckbox = document.getElementById('lighthouse');
+            const lighthouseFields = document.getElementById('lighthouseFields');
+            const nonLighthouseFields = document.getElementById('nonLighthouseFields');
+            const lighthouseIdSelect = document.getElementById('lighthouseId');
+            const ipInput = document.getElementById('ip');
+            const subnetInput = document.getElementById('subnet');
+            const lighthouseIpsInput = document.getElementById('lighthouseIpsString');
+
+            // Placement constraints
+            const addConstraintBtn = document.getElementById('addConstraint');
+            const constraintsContainer = document.getElementById('placementConstraints');
+            let constraintCount = 1;
+
+            // Roles selection system
+            const rolesInput = document.getElementById('rolesString');
+            const allowedRolesInput = document.getElementById('allowedRolesString');
+            const selectedRolesContainer = document.getElementById('selectedRoles');
+            const selectedAllowedRolesContainer = document.getElementById('selectedAllowedRoles');
+
+            // Track selected roles
+            const selectedRoles = new Set();
+            const selectedAllowedRoles = new Set();
+
+            // Toggle lighthouse/non-lighthouse fields
+            function toggleFields() {
+                if (lighthouseCheckbox.checked) {
+                    lighthouseFields.style.display = 'block';
+                    nonLighthouseFields.style.display = 'none';
+                    lighthouseIdSelect.required = false;
+                    ipInput.required = true;
+                    subnetInput.required = true;
+                    lighthouseIpsInput.disabled = true;
+                } else {
+                    lighthouseFields.style.display = 'none';
+                    nonLighthouseFields.style.display = 'block';
+                    lighthouseIdSelect.required = true;
+                    ipInput.required = false;
+                    subnetInput.required = false;
+                    lighthouseIpsInput.disabled = false;
+                }
+            }
+
+            // Handle role button clicks
+            function setupRoleButtons(buttonContainer, selectedSet, outputElement, hiddenInput) {
+                const buttons = buttonContainer.querySelectorAll('.role-button');
+
+                buttons.forEach(button => {
+                    button.addEventListener('click', function () {
+                        const role = this.getAttribute('data-role');
+
+                        if (selectedSet.has(role)) {
+                            // Remove role if already selected
+                            selectedSet.delete(role);
+                            this.classList.remove('selected');
+
+                            // Remove from display
+                            const tagToRemove = outputElement.querySelector(`[data-role="${role}"]`);
+                            if (tagToRemove) {
+                                outputElement.removeChild(tagToRemove);
+                            }
+                        } else {
+                            // Add role if not selected
+                            selectedSet.add(role);
+                            this.classList.add('selected');
+
+                            // Add to display
+                            const tag = document.createElement('div');
+                            tag.className = 'selected-role-tag';
+                            tag.setAttribute('data-role', role);
+                            tag.innerHTML = `${role} <span class="remove-role">&times;</span>`;
+
+                            // Add remove functionality
+                            tag.querySelector('.remove-role').addEventListener('click', function () {
+                                selectedSet.delete(role);
+                                outputElement.removeChild(tag);
+                                buttonContainer.querySelector(`[data-role="${role}"]`).classList.remove('selected');
+                                updateHiddenInput();
+                            });
+
+                            outputElement.appendChild(tag);
+                        }
+
+                        updateHiddenInput();
+                    });
+                });
+
+                // Update the hidden input with comma-separated roles
+                function updateHiddenInput() {
+                    hiddenInput.value = Array.from(selectedSet).join(',');
+                }
+            }
+
+            // Add constraint button click
+            addConstraintBtn.addEventListener('click', function () {
+                constraintCount++;
+                const newConstraint = document.createElement('div');
+                newConstraint.className = 'constraint-entry form-row';
+                newConstraint.innerHTML = `
+                    <div class="form-group">
+                        <input type="text" class="form-control constraint-key" name="placementConstraints['key${constraintCount}']" placeholder="Key">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control constraint-value" name="placementConstraints['value${constraintCount}']" placeholder="Value">
+                    </div>
+                `;
+                constraintsContainer.appendChild(newConstraint);
+            });
+
+            // CIDR toggle functionality
+            const toggleCidrButton = document.getElementById('toggleCidrButton');
+            const toggleCidrText = document.getElementById('toggleCidrText');
+            const toggleCidrIcon = document.getElementById('toggleCidrIcon');
+            const cidrSection = document.getElementById('cidrSection');
+
+            toggleCidrButton.addEventListener('click', function () {
+                if (cidrSection.style.display === 'none') {
+                    cidrSection.style.display = 'block';
+                    toggleCidrText.textContent = 'Hide CIDR Restrictions';
+                    toggleCidrIcon.textContent = '▲';
+                } else {
+                    cidrSection.style.display = 'none';
+                    toggleCidrText.textContent = 'Show CIDR Restrictions';
+                    toggleCidrIcon.textContent = '▼';
+                }
+            });
+
+            // Initialize role button handlers
+            setupRoleButtons(
+                document.getElementById('rolesButtonsContainer'),
+                selectedRoles,
+                selectedRolesContainer,
+                rolesInput
+            );
+
+            setupRoleButtons(
+                document.getElementById('allowedRolesButtonsContainer'),
+                selectedAllowedRoles,
+                selectedAllowedRolesContainer,
+                allowedRolesInput
+            );
+
+            // Auto-select only lighthouse if there's only one
+            if (lighthouseIdSelect.options.length === 2) { // First option is placeholder, second is the only lighthouse
+                lighthouseIdSelect.selectedIndex = 1;
+            }
+
+            // Initialize lighthouse toggle
+            lighthouseCheckbox.addEventListener('change', toggleFields);
+            toggleFields(); // Initial state
+        });
+    </script>
+</body>
+
+</html>

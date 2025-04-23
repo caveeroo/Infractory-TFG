@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Docker Swarm Dashboard'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/swarm.css}">
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="swarm-container">
+                    <!-- Header Section -->
+                    <div class="dashboard-header">
+                        <h1 class="dashboard-title">Docker Swarm Dashboard</h1>
+                        <div class="action-buttons">
+                            <a href="/swarm/deploy" class="infra-btn">Deploy Service/Config</a>
+                            <button class="infra-btn" id="refreshBtn">Refresh Status</button>
+                        </div>
+                    </div>
+
+                    <!-- Alert messages -->
+                    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+                    <!-- Docker Swarm Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Monitor and manage your Docker Swarm cluster, including nodes, services, and resource allocation.')}">
+                    </div>
+
+                    <!-- Filter Section -->
+                    <div class="infrastructure-component full-width">
+                        <h2 class="component-name">Filter Options</h2>
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label for="tagFilter">Filter by Tag</label>
+                                <select id="tagFilter" class="filter-select">
+                                    <option value="">All Tags</option>
+                                    <option th:each="tag : ${availableTags}" th:value="${tag}" th:text="${tag}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="serverTypeFilter">Filter by Server Type</label>
+                                <select id="serverTypeFilter" class="filter-select">
+                                    <option value="">All Types</option>
+                                    <option value="TeamServer">Team Server</option>
+                                    <option value="Redirector">Redirector</option>
+                                    <option value="Phishing">Phishing</option>
+                                    <option value="SwarmManagerServer">Swarm Manager</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="statusFilter">Filter by Status</label>
+                                <select id="statusFilter" class="filter-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="down">Down</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <button id="applyFilters" class="infra-btn">Apply Filters</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Swarm Nodes Section -->
+                    <div class="infrastructure-component full-width" id="swarmMap">
+                        <div class="swarm-nodes-section">
+                            <!-- Manager Nodes -->
+                            <div class="node-category">
+                                <h2 class="component-name">Manager Nodes</h2>
+                                <div class="nodes-grid">
+                                    <div th:each="node : ${managerNodes}" class="node-card">
+                                        <div class="node-header">
+                                            <h3 th:text="${node.hostname}"></h3>
+                                            <span
+                                                th:class="${'status-badge ' + (node.status == 'ready' ? 'status-success' : 'status-danger')}"
+                                                th:text="${node.status}"></span>
+                                        </div>
+                                        <div class="node-details">
+                                            <p>ID: <span th:text="${node.nodeId}"></span></p>
+                                            <p>Role: <span class="status-badge status-primary">Manager</span></p>
+                                        </div>
+                                        <div class="node-actions">
+                                            <a th:href="@{/swarm/node/{id}(id=${node.id})}" class="infra-btn small">View
+                                                Details</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Worker Nodes -->
+                            <div class="node-category">
+                                <h2 class="component-name">Worker Nodes</h2>
+                                <div class="nodes-grid">
+                                    <div th:each="node : ${workerNodes}" class="node-card">
+                                        <div class="node-header">
+                                            <h3 th:text="${node.hostname}"></h3>
+                                            <span
+                                                th:class="${'status-badge ' + (node.status == 'ready' ? 'status-success' : 'status-danger')}"
+                                                th:text="${node.status}"></span>
+                                        </div>
+                                        <div class="node-details">
+                                            <p>ID: <span th:text="${node.nodeId}"></span></p>
+                                            <p>Role: <span class="status-badge status-secondary">Worker</span></p>
+                                        </div>
+                                        <div class="node-actions">
+                                            <a th:href="@{/swarm/node/{id}(id=${node.id})}" class="infra-btn small">View
+                                                Details</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const applyFiltersBtn = document.getElementById('applyFilters');
+            const refreshBtn = document.getElementById('refreshBtn');
+
+            applyFiltersBtn.addEventListener('click', function () {
+                const tagFilter = document.getElementById('tagFilter').value;
+                const serverTypeFilter = document.getElementById('serverTypeFilter').value;
+                const statusFilter = document.getElementById('statusFilter').value;
+
+                fetch(`/swarm/filter?tag=${tagFilter}&serverType=${serverTypeFilter}&status=${statusFilter}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('swarmMap').innerHTML = html;
+                    });
+            });
+
+            refreshBtn.addEventListener('click', function () {
+                location.reload();
+            });
+        });
+    </script>
+</body>
+
+</html>

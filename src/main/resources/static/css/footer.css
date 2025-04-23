@@ -1,0 +1,21 @@
+/* Footer */
+footer {
+    background-color: var(--white);
+    color: var(--dark);
+    padding: 1rem;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    /*border-top: 1px solid #333; !* Subtle border for separation *!*/
+
+    /* New styles to make the footer stick to the bottom */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}
+
+/* Add this to ensure content above the footer is not hidden */
+body {
+    padding-bottom: 3rem;
+    /* Adjust this value based on your footer's height */
+}

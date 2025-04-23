@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Dashboard'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<title>Dashboard</title>
+<link rel="stylesheet" th:href="@{/css/dashboard.css}">
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="dashboard-container">
+                    <!-- Welcome Header -->
+                    <div class="dashboard-header">
+                        <div class="welcome-section">
+                            <h1 class="welcome-title">Welcome to Infractory</h1>
+                            <p class="welcome-subtitle">Your centralized red team infrastructure management platform</p>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Section -->
+                    <div th:replace="~{dashboard/statistics :: statistics}"></div>
+
+                    <!-- Quick Actions Grid -->
+                    <div class="quick-actions-grid">
+                        <div class="infrastructure-component action-card">
+                            <div class="action-icon nebula-icon">🔒</div>
+                            <h3 class="component-name">Nebula Network</h3>
+                            <p class="component-details">Set up and manage your secure mesh network configurations.</p>
+                            <div class="action-buttons">
+                                <a href="/nebula/create" class="infra-btn">Create Config</a>
+                                <a href="/nebula" class="infra-btn small">View All</a>
+                            </div>
+                        </div>
+
+                        <div class="infrastructure-component action-card">
+                            <div class="action-icon instance-icon">🖥️</div>
+                            <h3 class="component-name">Infrastructure</h3>
+                            <p class="component-details">Deploy and manage your servers and redirectors.</p>
+                            <div class="action-buttons">
+                                <a href="/instances/create" class="infra-btn">Deploy Instance</a>
+                                <a href="/infrastructure" class="infra-btn small">View All</a>
+                            </div>
+                        </div>
+
+                        <div class="infrastructure-component action-card">
+                            <div class="action-icon swarm-icon">🐳</div>
+                            <h3 class="component-name">Docker Swarm</h3>
+                            <p class="component-details">Manage your containerized services and deployments.</p>
+                            <div class="action-buttons">
+                                <a href="/swarm/deploy" class="infra-btn">Deploy Service</a>
+                                <a href="/swarm" class="infra-btn small">View All</a>
+                            </div>
+                        </div>
+
+                        <div class="infrastructure-component action-card">
+                            <div class="action-icon secrets-icon">🔑</div>
+                            <h3 class="component-name">Secrets</h3>
+                            <p class="component-details">Securely store and manage your credentials.</p>
+                            <div class="action-buttons">
+                                <a href="/secrets/create" class="infra-btn">Add Secret</a>
+                                <a href="/secrets" class="infra-btn small">View All</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Getting Started Guide -->
+                    <div class="infrastructure-component guide-section">
+                        <h2 class="component-name">Getting Started Guide</h2>
+                        <div class="guide-steps">
+                            <div class="guide-step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <h3>Set up Nebula Network</h3>
+                                    <p>Create your secure mesh network to connect all infrastructure components.</p>
+                                </div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <h3>Deploy Infrastructure</h3>
+                                    <p>Create instances across different cloud providers for your operations.</p>
+                                </div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <h3>Configure Docker Swarm</h3>
+                                    <p>Set up your containerized services for scalable deployments.</p>
+                                </div>
+                            </div>
+                            <div class="guide-step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <h3>Manage Operations</h3>
+                                    <p>Monitor and maintain your infrastructure through the dashboard.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+
+</html>

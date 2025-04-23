@@ -1,0 +1,313 @@
+.deployment-container {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.deployment-header {
+    margin-bottom: 1.5rem;
+}
+
+.deployment-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.deployment-subtitle {
+    font-size: 1rem;
+    color: var(--secondary);
+    margin-bottom: 1rem;
+}
+
+.form-section {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.form-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #212529;
+    display: flex;
+    align-items: center;
+}
+
+.form-section-title i {
+    margin-right: 0.5rem;
+    color: var(--primary);
+}
+
+.help-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.2rem;
+}
+
+/* Grid layout styles */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-control {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 105, 255, 0.25);
+}
+
+/* Target selection styles */
+.target-selection {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.target-option {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+.target-option:hover {
+    background-color: #d6d8db;
+}
+
+.target-option.selected {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.target-option i {
+    margin-right: 0.5rem;
+}
+
+/* Environment variables and ports styling */
+.variable-container {
+    margin-bottom: 0.5rem;
+}
+
+.variable-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.variable-row input {
+    flex-grow: 1;
+}
+
+.btn-add {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+}
+
+.btn-add:hover {
+    background-color: var(--bs-primary-dark, #0056b3);
+}
+
+.btn-remove {
+    background-color: var(--danger, #dc3545);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.9rem;
+}
+
+.btn-remove:hover {
+    background-color: var(--bs-danger-dark, #bd2130);
+}
+
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Tag styling */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.tag {
+    background-color: var(--primary);
+    color: white;
+    border-radius: 4px;
+    padding: 0.2rem 0.6rem;
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.tag-remove {
+    margin-left: 0.4rem;
+    cursor: pointer;
+}
+
+/* Submit button */
+.submit-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-top: 1rem;
+}
+
+.submit-btn:hover {
+    background-color: var(--bs-primary-dark, #0056b3);
+}
+
+/* Card layout for the deployment forms */
+.deployment-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 1.5rem;
+}
+
+@media (max-width: 992px) {
+    .deployment-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.deployment-card {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.deployment-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--dark);
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Toggle for advanced options */
+.advanced-toggle {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.advanced-toggle:hover {
+    background-color: #e9ecef;
+}
+
+.advanced-toggle i {
+    margin-right: 0.5rem;
+}
+
+.toggle-icon {
+    margin-left: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.toggle-icon.open {
+    transform: rotate(180deg);
+}
+
+/* Alerts styling */
+.alert {
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid var(--success);
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--danger);
+    color: #721c24;
+}
+
+.alert-info {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary);
+    color: #0c5460;
+}

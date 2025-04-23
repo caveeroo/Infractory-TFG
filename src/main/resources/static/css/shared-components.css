@@ -1,0 +1,28 @@
+/* Page Description Styles */
+.page-description {
+    margin-bottom: 2rem;
+}
+
+.welcome-section {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.welcome-subtitle {
+    font-size: 1.2rem;
+    color: var(--secondary);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .welcome-subtitle {
+        color: var(--text-secondary-dark);
+    }
+}

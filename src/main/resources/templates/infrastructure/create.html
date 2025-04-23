@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Create Infrastructure'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/infrastructure-creation.css}">
+<style>
+    /* Styles for auto-selected dropdowns */
+    .auto-selected {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.1rem rgba(40, 167, 69, 0.25);
+    }
+
+    .auto-selected-note {
+        display: block;
+        margin-top: 5px;
+        font-style: italic;
+    }
+</style>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="infra-creation-container">
+                    <div class="alert alert-info" role="alert">
+                        <strong>Note:</strong> Only available (unused) instances and Nebula configurations are shown.
+                        Resources that are already in use by existing servers (including the host server) are filtered
+                        out to prevent conflicts.
+                    </div>
+                    <form th:action="@{/infrastructure/create}" method="post" class="infra-creation-form">
+                        <div class="infra-creation-grid">
+                            <div class="infra-creation-component full-width">
+                                <h2 class="component-name">Server Type</h2>
+                                <div class="component-content">
+                                    <select id="serverType" name="serverType" class="infra-select" required>
+                                        <option value="" selected disabled>Select Server Type</option>
+                                        <option value="Phishing">Phishing</option>
+                                        <option value="Redirector">Redirector</option>
+                                        <option value="TeamServer">Team Server</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="infra-creation-component">
+                                <h2 class="component-name">Instance</h2>
+                                <div class="component-content">
+                                    <select id="instanceId" name="instanceId" class="infra-select" required>
+                                        <option value="" selected disabled>Select Instance</option>
+                                        <option th:each="instance : ${availableInstances}" th:value="${instance.id}"
+                                            th:text="${instance.name}"></option>
+                                    </select>
+                                    <small class="text-muted" th:if="${#lists.isEmpty(availableInstances)}">No available
+                                        instances. Create an instance first or free up a used one.</small>
+                                    <small class="text-muted" th:if="${not #lists.isEmpty(availableInstances)}">Showing
+                                        only unused instances.</small>
+                                </div>
+                            </div>
+
+                            <div class="infra-creation-component">
+                                <h2 class="component-name">Description</h2>
+                                <div class="component-content">
+                                    <input type="text" id="description" name="description" class="infra-input" required>
+                                </div>
+                            </div>
+
+                            <div class="infra-creation-component">
+                                <h2 class="component-name">SSH Key</h2>
+                                <div class="component-content">
+                                    <select id="sshKeyId" name="sshKeyId" class="infra-select" required>
+                                        <option value="" selected disabled>Select SSH Key</option>
+                                        <option th:each="sshKey : ${availableSSHKeys}" th:value="${sshKey.id}"
+                                            th:text="${sshKey.name}"></option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="infra-creation-component">
+                                <h2 class="component-name">Nebula Configuration</h2>
+                                <div class="component-content">
+                                    <select id="nebulaConfigId" name="nebulaConfigId" class="infra-select" required>
+                                        <option value="" selected disabled>Select Nebula Config</option>
+                                        <option th:each="nebulaConfig : ${availableNebulaConfigs}"
+                                            th:value="${nebulaConfig.id}" th:text="${nebulaConfig.ip}"></option>
+                                    </select>
+                                    <small class="text-muted" th:if="${#lists.isEmpty(availableNebulaConfigs)}">No
+                                        available Nebula configurations. Create a configuration first or free up a used
+                                        one.</small>
+                                    <small class="text-muted"
+                                        th:if="${not #lists.isEmpty(availableNebulaConfigs)}">Showing only unused Nebula
+                                        configurations (excludes those used by servers and the host).</small>
+                                </div>
+                            </div>
+
+                            <div class="infra-creation-component create-server-component">
+                                <button type="submit" id="createServerBtn" class="infra-creation-btn">Create
+                                    Server</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            // Auto-select the only option in any select element if there's only one option (excluding the placeholder)
+            const selectElements = document.querySelectorAll('.infra-select');
+
+            selectElements.forEach(select => {
+                // Get all non-placeholder options (those without 'disabled' attribute)
+                const realOptions = Array.from(select.options).filter(option => !option.disabled);
+
+                // If there's exactly one real option, select it
+                if (realOptions.length === 1) {
+                    realOptions[0].selected = true;
+
+                    // Trigger a change event to ensure any dependent logic is executed
+                    const event = new Event('change', { bubbles: true });
+                    select.dispatchEvent(event);
+
+                    // Add a visual indicator that this was auto-selected
+                    select.classList.add('auto-selected');
+
+                    // Add a small note after the select if it doesn't exist yet
+                    const selectParent = select.parentElement;
+                    if (!selectParent.querySelector('.auto-selected-note')) {
+                        const note = document.createElement('small');
+                        note.className = 'auto-selected-note text-success';
+                        note.innerText = 'Auto-selected as only option';
+                        selectParent.appendChild(note);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

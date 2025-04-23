@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Nodes List Fragment -->
+    <div th:fragment="nodesList">
+        <!-- Manager Nodes -->
+        <div class="category">
+            <div class="category-title">Swarm Managers</div>
+            <div class="components">
+                <div th:if="${#lists.isEmpty(managerNodes)}" class="alert alert-info">
+                    No manager nodes found.
+                </div>
+                <div th:each="node : ${managerNodes}" class="swarm-node">
+                    <div class="swarm-node-header">
+                        <div class="swarm-node-title" th:text="${node.hostname}"></div>
+                        <div class="swarm-node-status-container">
+                            <span class="swarm-node-role manager">Manager</span>
+                            <span th:class="${'swarm-node-status ' + node.status}" th:text="${node.status}"></span>
+                        </div>
+                    </div>
+                    <div class="swarm-node-details">
+                        <div class="swarm-node-detail-item">
+                            <strong>Node ID:</strong> <span
+                                th:text="${node.nodeId != null ? (node.nodeId.length() > 12 ? #strings.substring(node.nodeId, 0, 12) + '...' : node.nodeId) : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>IP:</strong> <span
+                                th:text="${node.server != null && node.server.instance != null ? node.server.instance.ip : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>Services:</strong> <span th:text="${node.services.size()}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>Server Type:</strong> <span
+                                th:text="${node.server != null ? node.server.class.simpleName : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item" th:if="${node.server != null && node.server.vpn != null}">
+                            <strong>Nebula IP:</strong>
+                            <span class="badge badge-info nebula-badge">
+                                <span class="vpn-icon">🔒</span> <span th:text="${node.server.vpn.ipWithSubnet}"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="swarm-node-actions">
+                        <a th:href="@{/swarm/node/{id}(id=${node.id})}" class="btn btn-sm btn-outline-primary">View
+                            Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker Nodes -->
+        <div class="category">
+            <div class="category-title">Swarm Workers</div>
+            <div class="components">
+                <div th:if="${#lists.isEmpty(workerNodes)}" class="alert alert-info">
+                    No worker nodes found.
+                </div>
+                <div th:each="node : ${workerNodes}" class="swarm-node">
+                    <div class="swarm-node-header">
+                        <div class="swarm-node-title" th:text="${node.hostname}"></div>
+                        <div class="swarm-node-status-container">
+                            <span class="swarm-node-role worker">Worker</span>
+                            <span th:class="${'swarm-node-status ' + node.status}" th:text="${node.status}"></span>
+                        </div>
+                    </div>
+                    <div class="swarm-node-details">
+                        <div class="swarm-node-detail-item">
+                            <strong>Node ID:</strong> <span
+                                th:text="${node.nodeId != null ? (node.nodeId.length() > 12 ? #strings.substring(node.nodeId, 0, 12) + '...' : node.nodeId) : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>IP:</strong> <span
+                                th:text="${node.server != null && node.server.instance != null ? node.server.instance.ip : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>Services:</strong> <span th:text="${node.services.size()}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item">
+                            <strong>Server Type:</strong> <span
+                                th:text="${node.server != null ? node.server.class.simpleName : 'N/A'}"></span>
+                        </div>
+                        <div class="swarm-node-detail-item" th:if="${node.server != null && node.server.vpn != null}">
+                            <strong>Nebula IP:</strong>
+                            <span class="badge badge-info nebula-badge">
+                                <span class="vpn-icon">🔒</span> <span th:text="${node.server.vpn.ipWithSubnet}"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="swarm-node-actions">
+                        <a th:href="@{/swarm/node/{id}(id=${node.id})}" class="btn btn-sm btn-outline-primary">View
+                            Details</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

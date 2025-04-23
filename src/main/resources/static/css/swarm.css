@@ -1,0 +1,1291 @@
+/* Docker Swarm Dashboard Styles */
+
+/* Swarm-specific styles */
+.swarm-node {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.swarm-node:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.swarm-node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.swarm-node-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.swarm-node-status {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.85em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+.swarm-node-status.ready {
+    background-color: #28a745;
+    color: white;
+}
+
+.swarm-node-status.down {
+    background-color: #dc3545;
+    color: white;
+}
+
+.swarm-node-role {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.85em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    margin-right: 5px;
+}
+
+.swarm-node-role.manager {
+    background-color: #007bff;
+    color: white;
+}
+
+.swarm-node-role.worker {
+    background-color: #6c757d;
+    color: white;
+}
+
+.swarm-node-details {
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.swarm-node-detail-item {
+    margin-bottom: 5px;
+}
+
+.swarm-node-actions {
+    margin-top: 15px;
+}
+
+/* Service styles */
+.swarm-service {
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.swarm-service:hover {
+    background-color: #f8f9fa;
+}
+
+.swarm-service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.swarm-service-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.swarm-service-status {
+    display: inline-block;
+    padding: 0.2em 0.5em;
+    font-size: 0.8em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+}
+
+.swarm-service-status.running {
+    background-color: #28a745;
+    color: white;
+}
+
+.swarm-service-status.stopped {
+    background-color: #dc3545;
+    color: white;
+}
+
+.swarm-service-status.restarting {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.swarm-service-details {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.swarm-service-tags {
+    margin-top: 8px;
+}
+
+.swarm-service-tag {
+    display: inline-block;
+    padding: 0.2em 0.5em;
+    font-size: 0.75em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    background-color: #e9ecef;
+    color: #495057;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.swarm-service-actions {
+    margin-top: 10px;
+}
+
+/* Filter container */
+.filter-container {
+    margin-bottom: 20px;
+}
+
+/* Deployment form */
+.deployment-form {
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.deployment-form-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.deployment-target-selector {
+    margin-bottom: 15px;
+}
+
+.deployment-target-form {
+    padding: 15px;
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+/* Node logs */
+.node-logs {
+    background-color: #212529;
+    color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: monospace;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .swarm-node-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .swarm-node-status-container {
+        margin-top: 10px;
+    }
+}
+
+/* Integration with existing infrastructure styles */
+.infrastructure-map .swarm-category {
+    margin-bottom: 30px;
+}
+
+.infrastructure-map .swarm-components {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* Badge styles consistent with infrastructure */
+.badge.manager {
+    background-color: #007bff;
+    color: white;
+}
+
+.badge.worker {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge.service {
+    background-color: #17a2b8;
+    color: white;
+}
+
+/* Button styles consistent with infrastructure */
+.swarm-btn {
+    display: inline-block;
+    font-weight: 500;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    background-color: #007bff;
+    color: #fff;
+    cursor: pointer;
+}
+
+.swarm-btn:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+    color: #fff;
+    text-decoration: none;
+}
+
+.swarm-btn-outline {
+    background-color: transparent;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.swarm-btn-outline:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.swarm-btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.swarm-btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+.swarm-btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.swarm-btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+}
+
+/* Card styles */
+.swarm-card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.swarm-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.swarm-card-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.swarm-card-body {
+    padding: 20px;
+}
+
+.swarm-card-title {
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem;
+    font-weight: 500;
+}
+
+.swarm-card-text {
+    margin-bottom: 0;
+}
+
+/* Table styles */
+.swarm-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.swarm-table th {
+    padding: 12px;
+    text-align: left;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.swarm-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.swarm-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Alert styles */
+.swarm-alert {
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+.swarm-alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.swarm-alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.swarm-alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.swarm-alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+/* Swarm section styles */
+.swarm-card {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.swarm-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.swarm-card-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.swarm-card-body {
+    padding: 20px;
+}
+
+.swarm-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.swarm-table th {
+    padding: 12px;
+    text-align: left;
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.swarm-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.swarm-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.swarm-service-tag {
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #28a745;
+    color: white;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+.deployment-form .form-group {
+    margin-bottom: 25px;
+}
+
+.deployment-form label {
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.deployment-form .custom-control {
+    margin-bottom: 8px;
+}
+
+.infra-btn {
+    padding: 10px 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* Placement sections */
+.placement-section {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Port mapping styles */
+#portsContainer .input-group {
+    margin-bottom: 10px;
+}
+
+#portsContainer .input-group-text {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+}
+
+/* Alert styles */
+.alert {
+    border-radius: 8px;
+}
+
+/* Add a bit of spacing for the buttons */
+.btn {
+    margin-right: 5px;
+}
+
+/* Improve form controls */
+.form-control {
+    border-radius: 6px;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Tag container */
+#tagsContainer {
+    min-height: 40px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+/* Main container */
+.swarm-container {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.swarm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Infrastructure component styling (matching ssh-keys-management.css) */
+.infrastructure-component {
+    background-color: var(--white);
+    border: 1px solid var(--secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.infrastructure-component:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.infrastructure-component.full-width {
+    grid-column: 1 / -1;
+}
+
+.component-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1rem;
+}
+
+.component-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--secondary);
+}
+
+.component-details {
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+/* Details table */
+.details-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.details-table th,
+.details-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--light);
+    text-align: left;
+}
+
+.details-table th {
+    font-weight: 600;
+    color: var(--dark);
+    width: 40%;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.85em;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    color: var(--white);
+}
+
+.status-success {
+    background-color: var(--success);
+}
+
+.status-danger {
+    background-color: var(--danger);
+}
+
+.status-warning {
+    background-color: var(--warning);
+}
+
+.status-primary {
+    background-color: var(--primary);
+}
+
+.status-secondary {
+    background-color: var(--secondary);
+}
+
+/* Services grid */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.service-card {
+    background-color: var(--light);
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.service-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.service-details {
+    margin-bottom: 1rem;
+}
+
+.service-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.tag {
+    background-color: var(--secondary);
+    color: var(--white);
+    padding: 0.2em 0.6em;
+    border-radius: 12px;
+    font-size: 0.8em;
+}
+
+/* Action buttons */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.infra-btn {
+    color: var(--white);
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    background-color: var(--primary);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.infra-btn:hover {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    color: var(--white);
+    text-decoration: none;
+}
+
+.infra-btn.small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.infra-btn.warning {
+    background-color: var(--warning);
+}
+
+.infra-btn.danger {
+    background-color: var(--danger);
+}
+
+/* Logs container */
+.logs-container {
+    background-color: var(--dark);
+    color: var(--light);
+    padding: 1rem;
+    border-radius: 4px;
+    font-family: monospace;
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 0;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--secondary);
+}
+
+/* Modal styling */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: var(--white);
+    border-radius: 8px;
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.modal-body {
+    margin-bottom: 1rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .swarm-container {
+        padding: 1rem;
+        gap: 1.5rem;
+    }
+
+    .swarm-grid,
+    .services-grid,
+    .nodes-grid {
+        gap: 1rem;
+    }
+
+    .infrastructure-component {
+        margin-bottom: 1.5rem;
+    }
+
+    .swarm-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .infra-btn {
+        width: 100%;
+    }
+}
+
+/* Dashboard Header */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.dashboard-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 0;
+}
+
+/* Filter Styles */
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    align-items: end;
+    margin-bottom: 2rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--dark);
+}
+
+.filter-select {
+    padding: 0.5rem;
+    border: 1px solid var(--secondary);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Node Category Styles */
+.node-category {
+    margin-bottom: 3rem;
+}
+
+.nodes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.node-card {
+    background-color: var(--white);
+    border: 1px solid var(--secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.node-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.node-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--dark);
+}
+
+.node-details {
+    margin-bottom: 1rem;
+}
+
+.node-details p {
+    margin: 0.5rem 0;
+    color: var(--secondary);
+    font-size: 0.9rem;
+}
+
+.node-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Swarm Nodes Section */
+.swarm-nodes-section {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Alert Styles */
+.alert {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.alert-success {
+    background-color: var(--success);
+    color: var(--white);
+}
+
+.alert-danger {
+    background-color: var(--danger);
+    color: var(--white);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nodes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        width: 100%;
+    }
+
+    .action-buttons .infra-btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Deployment Form Styling */
+.deployment-container {
+    padding: 2rem;
+    width: 100%;
+}
+
+.deployment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.deployment-card {
+    background-color: var(--white);
+    border: 1px solid var(--secondary);
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.deployment-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.deployment-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--secondary);
+    background-color: var(--light);
+    border-radius: 8px 8px 0 0;
+}
+
+.deployment-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin: 0;
+}
+
+.deployment-content {
+    padding: 1.5rem;
+}
+
+/* Form Group Styling */
+.form-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--light);
+    border-radius: 6px;
+}
+
+.form-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 1rem;
+}
+
+/* Input Groups */
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.input-group-text {
+    padding: 0.5rem 1rem;
+    background-color: var(--secondary);
+    color: var(--white);
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+/* Tags Input */
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--secondary);
+    border-radius: 6px;
+    min-height: 42px;
+}
+
+.tag {
+    background-color: var(--primary);
+    color: var(--white);
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tag-remove {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.tag-remove:hover {
+    opacity: 1;
+}
+
+/* Advanced Options */
+.advanced-options {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--secondary);
+}
+
+.advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dark);
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+.advanced-toggle:hover {
+    background-color: var(--light);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .deployment-container {
+        padding: 1rem;
+    }
+
+    .deployment-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group>* {
+        width: 100%;
+    }
+}
+
+/* Service Inspection Modal Styles */
+.code-block {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 1rem;
+    font-family: monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.tag-container {
+    margin: 0.5rem 0;
+}
+
+.tag-container .badge {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.service-info h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.service-info .table {
+    margin-bottom: 0;
+}
+
+.service-info .table th {
+    width: 30%;
+    font-weight: 600;
+}
+
+/* Modal size adjustments */
+.modal-lg {
+    max-width: 800px;
+}
+
+.modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+/* Status badges in modal */
+#modalServiceStatus {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+#modalServiceStatus.running {
+    background-color: #28a745;
+    color: white;
+}
+
+#modalServiceStatus.warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+#modalServiceStatus.error {
+    background-color: #dc3545;
+    color: white;
+}
+
+
+.service-card {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    background-color: var(--component-bg);
+}
+
+.service-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background-color: var(--table-header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.service-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.service-details {
+    padding: 1rem;
+}
+
+.service-tags {
+    margin-top: 0.5rem;
+}
+
+.tag {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    background-color: var(--tag-bg);
+    color: var(--tag-text);
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+.service-actions {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border-color);
+    text-align: right;
+}
+
+.logs-container {
+    background-color: var(--log-bg);
+    color: var(--log-text);
+    padding: 1rem;
+    border-radius: 4px;
+    max-height: 400px;
+    /* Limit height */
+    overflow-y: auto;
+    /* Add scrollbar */
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    white-space: pre-wrap;
+    /* Wrap long lines */
+    word-wrap: break-word;
+}
+
+/* Ensure modal dialog is centered */
+.modal-dialog {
+    display: flex;
+    align-items: center;
+    min-height: calc(100% - 1rem);
+    /* Adjust as needed */
+}
+
+/* Ensure modal log container has appropriate colors */
+#serviceInspectModal .logs-container {
+    background-color: var(--log-bg, #2b2b2b);
+    /* Default dark background */
+    color: var(--log-text, #a9b7c6);
+    /* Default light text */
+}
+
+/* Ensure code blocks in modal have good contrast */
+#serviceInspectModal .code-block {
+    background-color: var(--code-block-bg, #f8f9fa);
+    /* Default light background */
+    color: var(--code-block-text, #212529);
+    /* Default dark text */
+    border: 1px solid var(--border-color);
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    font-family: Consolas, monaco, monospace;
+    font-size: 0.85em;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    /* Limit height for inspect output too */
+    overflow: auto;
+}
+
+/* Override modal code block colors if needed specifically for logs */
+#serviceInspectModal #modalServiceLogs {
+    background-color: var(--log-bg, #1e1e1e);
+    /* Darker bg for logs */
+    color: var(--log-text, #d4d4d4);
+    /* Light text for logs */
+}
+
+/* Force Modal z-index (Bootstrap defaults are usually fine, but let's be explicit) */
+.modal-backdrop {
+    z-index: 1040 !important;
+    /* Default is 1040 */
+}
+
+.modal {
+    z-index: 1050 !important;
+    /* Default is 1050 */
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Ensure modal itself can scroll if content overflows */
+}

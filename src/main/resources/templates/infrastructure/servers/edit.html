@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Edit Servers'">
+
+<head th:replace="~{fragments/head :: head}">
+    <link rel="stylesheet" th:href="@{/css/instance-management.css}">
+</head>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <h2 class="form-title">Edit Servers</h2>
+                <form action="/infrastructure/servers/update" method="post" class="infrastructure-form">
+                    <div class="infrastructure-grid">
+                        <div th:each="server : ${servers}" class="server-card">
+                            <div class="server-name" th:text="${server.details.name}"></div>
+                            <div class="server-description">
+                                <label th:for="'server_' + ${server.id} + '_description'">Description:</label>
+                                <input type="text" th:value="${server.details.description}"
+                                    th:name="'server_' + ${server.id} + '_description'"
+                                    class="form-control description-input" />
+                            </div>
+                            <div class="server-instance">
+                                <label th:for="'server_' + ${server.id}">Instance:</label>
+                                <select th:id="'server_' + ${server.id}" th:name="'server_' + ${server.id}"
+                                    class="form-control instance-select">
+                                    <option value="">Select an instance</option>
+                                    <option th:each="instance : ${availableInstances}" th:value="${instance.id}"
+                                        th:text="${instance.name + ' (' + instance.ip + ')'}"
+                                        th:selected="${server.instance != null and server.instance.id == instance.id}">
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary update-btn">Update Servers</button>
+                </form>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+
+</html>

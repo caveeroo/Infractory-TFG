@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<body>
+    <!-- Simple Page Description Fragment -->
+    <div class="page-description" th:fragment="description(description)">
+        <div class="welcome-section">
+            <p class="welcome-subtitle" th:text="${description}">Page description goes here.</p>
+        </div>
+    </div>
+</body>
+
+</html>

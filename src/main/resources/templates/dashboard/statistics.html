@@ -1,0 +1,18 @@
+<div class="statistics" th:fragment="statistics">
+  <div class="stat-card stat-1">
+    <h2>Active Servers</h2>
+    <p id="activeServersValue" class="stat-value" th:text="${activeServers}">0</p>
+  </div>
+  <div class="stat-card stat-2">
+    <h2>Active Instances</h2>
+    <p id="activeInstancesValue" class="stat-value" th:text="${activeInstances}">0</p>
+  </div>
+  <div class="stat-card stat-3">
+    <h2>Nebula Configs</h2>
+    <p id="nebulaConfigsValue" class="stat-value" th:text="${nebulaConfigs}">0</p>
+  </div>
+  <div class="stat-card stat-4">
+    <h2>Stored Secrets</h2>
+    <p id="storedSecretsValue" class="stat-value" th:text="${storedSecrets}">0</p>
+  </div>
+</div>

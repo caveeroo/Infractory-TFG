@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Create Instance'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/instance-management.css}">
+<link rel="stylesheet" th:href="@{/css/shared-components.css}">
+<style>
+    /* Styles for auto-selected dropdowns */
+    .auto-selected {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.1rem rgba(40, 167, 69, 0.25);
+    }
+
+    .auto-selected-note {
+        display: block;
+        margin-top: 5px;
+        font-style: italic;
+        color: #28a745;
+        font-size: 0.85rem;
+    }
+
+    /* Compatibility warning styles */
+    .compatibility-warning .alert,
+    .region-compatibility-warning .alert {
+        margin-top: 10px;
+        font-size: 0.9rem;
+        border-left: 4px solid #f0ad4e;
+    }
+
+    .compatibility-warning ul,
+    .region-compatibility-warning ul {
+        margin-top: 5px;
+        padding-left: 20px;
+    }
+
+    .size-info-text,
+    .region-note-text {
+        margin-top: 5px;
+        font-style: italic;
+        color: #6c757d;
+    }
+</style>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="instance-container">
+                    <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
+
+                    <!-- Instance Creation Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Deploy new infrastructure instances across different cloud providers with custom configurations.')}">
+                    </div>
+
+                    <form th:action="@{/instances/create}" method="post" class="instance-form">
+                        <div class="instance-grid">
+                            <div class="infrastructure-component">
+                                <h2 class="component-name">Instance Name</h2>
+                                <div class="component-details">
+                                    <input type="text" class="form-control" id="name" name="name"
+                                        placeholder="Instance Name" required>
+                                </div>
+                            </div>
+
+                            <div class="infrastructure-component form-card expanded" id="providerCard" data-provider="">
+                                <h2 class="component-name">Provider</h2>
+                                <div class="component-details form-card-content">
+                                    <select class="form-control" id="provider" name="provider">
+                                        <option value="" selected disabled>Select Provider</option>
+                                        <option th:each="provider : ${providers}" th:value="${provider}"
+                                            th:text="${provider}"></option>
+                                    </select>
+                                </div>
+                                <span class="selected-value"></span>
+                            </div>
+
+                            <div class="infrastructure-component form-card" id="regionCard" data-provider="">
+                                <h2 class="component-name">Region</h2>
+                                <div class="component-details form-card-content">
+                                    <select class="form-control" id="region" name="region">
+                                        <!-- Regions will be populated dynamically -->
+                                    </select>
+                                </div>
+                                <span class="selected-value"></span>
+                            </div>
+
+                            <div class="infrastructure-component form-card" id="sizeCard" data-provider="">
+                                <h2 class="component-name">Size</h2>
+                                <div class="component-details form-card-content">
+                                    <select class="form-control" id="size" name="size">
+                                        <!-- Sizes will be populated dynamically -->
+                                    </select>
+                                </div>
+                                <span class="selected-value"></span>
+                            </div>
+
+                            <div class="infrastructure-component form-card" id="imageCard" data-provider="">
+                                <h2 class="component-name">Image</h2>
+                                <div class="component-details form-card-content">
+                                    <input type="text" class="form-control image-search-input mb-2"
+                                        placeholder="Search images..." style="display: none;">
+                                    <select class="form-control" id="imageId" name="imageId">
+                                        <!-- Images will be populated dynamically -->
+                                    </select>
+                                </div>
+                                <span class="selected-value"></span>
+                            </div>
+
+                            <div class="infrastructure-component form-card" id="sshKeyCard" data-provider="">
+                                <h2 class="component-name">SSH Key</h2>
+                                <div class="component-details form-card-content">
+                                    <select class="form-control" id="sshKeyId" name="sshKeyId">
+                                        <option value="" selected disabled>Select SSH Key</option>
+                                        <option th:each="sshKey : ${sshKeys}" th:value="${sshKey.id}"
+                                            th:text="${sshKey.name}"></option>
+                                    </select>
+                                </div>
+                                <span class="selected-value"></span>
+                            </div>
+
+                            <div class="infrastructure-component form-card" id="createCard">
+                                <div class="component-details">
+                                    <button type="submit" id="createInstanceBtn" class="infra-btn">Create
+                                        Instance</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const providers = {
+            DigitalOcean: {
+                regions: /*[[${digitaloceanRegions}]]*/[],
+                sizes: /*[[${digitaloceanSizes}]]*/[],
+                images: /*[[${digitaloceanImages}]]*/[]
+            },
+            AWS: {
+                regions: /*[[${awsRegions}]]*/[],
+                sizes: /*[[${awsSizes}]]*/[],
+                images: /*[[${awsImages}]]*/[]
+            },
+            Local: {
+                regions: /*[[${localRegions}]]*/[],
+                sizes: /*[[${localSizes}]]*/[],
+                images: /*[[${localImages}]]*/[]
+            }
+        };
+
+        console.log('Providers data:', providers);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const cards = document.querySelectorAll('.form-card:not(#createCard)');
+            const selects = document.querySelectorAll('.form-card select');
+            const providerSelect = document.getElementById('provider');
+            const createButton = document.getElementById('createInstanceBtn');
+            const nameInput = document.getElementById('name');
+
+            // Auto-select function for any select element
+            function autoSelectOnlyOption(select) {
+                if (!select) return;
+
+                // Get all non-placeholder options (those without 'disabled' attribute)
+                const realOptions = Array.from(select.options).filter(option => !option.disabled);
+
+                // If there's exactly one real option, select it
+                if (realOptions.length === 1) {
+                    select.value = realOptions[0].value;
+                    realOptions[0].selected = true;
+
+                    // Trigger a change event to ensure any dependent logic is executed
+                    const event = new Event('change', { bubbles: true });
+                    select.dispatchEvent(event);
+
+                    // Add a visual indicator that this was auto-selected
+                    select.classList.add('auto-selected');
+
+                    // Log the auto-selection
+                    console.log(`Auto-selected ${select.id}: ${select.value}`);
+
+                    return true;
+                }
+                return false;
+            }
+
+            function expandCard(card) {
+                card.classList.add('expanded');
+                card.querySelector('.form-card-content').style.display = 'block';
+
+                // Ensure form value is preserved
+                const select = card.querySelector('select');
+                const selectedValue = card.querySelector('.selected-value').textContent;
+
+                if (select && selectedValue && !select.value) {
+                    // Try to find and select the option with matching text
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].textContent === selectedValue) {
+                            select.value = select.options[i].value;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            function collapseCard(card, selectedValue) {
+                if (!card) return;
+                card.classList.remove('expanded');
+                const contentEl = card.querySelector('.form-card-content');
+                if (contentEl) contentEl.style.display = 'none';
+
+                const valueEl = card.querySelector('.selected-value');
+                if (valueEl) valueEl.textContent = selectedValue || '';
+
+                // Ensure the select element's value is properly set
+                const select = card.querySelector('select');
+                if (select && selectedValue) {
+                    // Find the option with the matching text
+                    let foundOption = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].textContent === selectedValue) {
+                            select.value = select.options[i].value;
+                            foundOption = true;
+                            break;
+                        }
+                    }
+
+                    // If we didn't find an exact match, check for a partial match
+                    if (!foundOption && selectedValue) {
+                        for (let i = 0; i < select.options.length; i++) {
+                            if (selectedValue.includes(select.options[i].textContent) ||
+                                select.options[i].textContent.includes(selectedValue)) {
+                                select.value = select.options[i].value;
+                                break;
+                            }
+                        }
+                    }
+
+                    console.log(`Collapsed ${card.id} with selected value: ${selectedValue}, set select value: ${select.value}`);
+                }
+            }
+
+            function enableNextCard(currentCard) {
+                const nextCard = currentCard.nextElementSibling;
+                if (nextCard && nextCard.id !== 'createCard') {
+                    const nextSelect = nextCard.querySelector('select');
+                    const nextInput = nextCard.querySelector('input');
+                    if (nextSelect) {
+                        nextSelect.disabled = false;
+                    }
+                    if (nextInput) {
+                        nextInput.disabled = false;
+                    }
+                    expandCard(nextCard);
+
+                    // Try to auto-select if the next card has only one option
+                    if (nextSelect) {
+                        const wasAutoSelected = autoSelectOnlyOption(nextSelect);
+                        if (wasAutoSelected) {
+                            // If auto-selected, collapse the card and show the next one
+                            collapseCard(nextCard, nextSelect.options[nextSelect.selectedIndex].text);
+                            enableNextCard(nextCard);
+                        }
+                    }
+                }
+            }
+
+            // Initially, only enable the first card and collapse others
+            cards.forEach((card, index) => {
+                const select = card.querySelector('select');
+                const input = card.querySelector('input');
+                if (index !== 0) {
+                    if (select) {
+                        select.disabled = true;
+                    }
+                    if (input) {
+                        input.disabled = true;
+                    }
+                    collapseCard(card, '');
+                } else {
+                    expandCard(card);
+                    // Try to auto-select the provider if there's only one
+                    if (select && select.id === 'provider') {
+                        autoSelectOnlyOption(select);
+                    }
+                }
+            });
+
+            cards.forEach(card => {
+                const header = card.querySelector('.component-name');
+                const select = card.querySelector('select');
+                const input = card.querySelector('input');
+
+                header.addEventListener('click', () => {
+                    if ((!select || !select.disabled) && (!input || !input.disabled)) {
+                        if (card.classList.contains('expanded')) {
+                            collapseCard(card, select ? select.options[select.selectedIndex].text : input.value);
+                        } else {
+                            expandCard(card);
+                        }
+                    }
+                });
+
+                if (select) {
+                    select.addEventListener('change', function () {
+                        if (this.value) {  // Only proceed if a non-placeholder option is selected
+                            // Make sure the selected text is correctly saved
+                            const selectedText = this.options[this.selectedIndex].text;
+                            collapseCard(card, selectedText);
+                            enableNextCard(card);
+                            updateDependentFields(this);
+
+                            if (this.id === 'provider') {
+                                let providerValue = this.value;
+                                if (providerValue === 'LocalProviderService') {
+                                    providerValue = 'Local';
+                                }
+                                document.querySelectorAll('.form-card').forEach(c => c.setAttribute('data-provider', providerValue));
+                                createButton.setAttribute('data-provider', providerValue);
+                            }
+
+                            // Ensure the value is still correctly set after all operations
+                            console.log(`Changed ${this.id} to value: ${this.value} (${selectedText})`);
+                        }
+                    });
+                }
+
+                if (input) {
+                    input.addEventListener('change', function () {
+                        collapseCard(card, this.value);
+                        enableNextCard(card);
+                    });
+                }
+            });
+
+            const formInputs = document.querySelectorAll('.form-card select, .form-card input, #name');
+
+            function checkFormCompletion() {
+                const allFilled = Array.from(formInputs).every(input => input.value !== '');
+                if (allFilled) {
+                    createButton.classList.add('active');
+                } else {
+                    createButton.classList.remove('active');
+                }
+            }
+
+            formInputs.forEach(input => {
+                input.addEventListener('change', checkFormCompletion);
+            });
+
+            function updateDependentFields(select) {
+                const provider = document.getElementById('provider').value;
+                const region = document.getElementById('region').value;
+                const imageId = document.getElementById('imageId').value;
+
+                console.log(`UpdateDependentFields called for ${select.id} - provider: ${provider}, region: ${region}, imageId: ${imageId}`);
+
+                switch (select.id) {
+                    case 'provider':
+                        updateRegions(provider);
+                        updateSizes(provider);
+                        updateImages(provider, region);
+                        break;
+                    case 'region':
+                        updateImages(provider, region);
+                        // Update compatible sizes based on both region and image
+                        if (imageId) {
+                            updateSizes(provider, imageId);
+                        } else {
+                            updateSizes(provider);
+                        }
+                        break;
+                    case 'imageId':
+                        // When image changes, update sizes to get compatible ones
+                        if (imageId) {
+                            console.log(`Updating sizes for image: ${imageId}`);
+                            updateSizes(provider, imageId);
+                        } else {
+                            updateSizes(provider);
+                        }
+                        break;
+                }
+                checkFormCompletion();
+            }
+
+            function resetFormFields(exceptProvider = false) {
+                cards.forEach((card, index) => {
+                    const select = card.querySelector('select');
+                    const input = card.querySelector('input');
+                    if (index !== 0 || !exceptProvider) {
+                        if (select) {
+                            select.value = '';
+                            select.disabled = index === 0 ? false : true;
+                        }
+                        if (input) {
+                            input.value = '';
+                            input.disabled = index === 0 ? false : true;
+                        }
+                        collapseCard(card, '');
+                    }
+                });
+
+                if (!exceptProvider) {
+                    nameInput.value = '';
+                }
+
+                createButton.classList.remove('active');
+                createButton.removeAttribute('data-provider');
+            }
+
+            providerSelect.addEventListener('change', function () {
+                resetFormFields(true);
+                updateRegions(this.value);
+                updateSizes(this.value);
+                updateImages(this.value, '');
+                document.querySelectorAll('.form-card').forEach(c => c.setAttribute('data-provider', this.value));
+                createButton.setAttribute('data-provider', this.value);
+
+                // Enable the region select after provider change
+                const regionCard = document.getElementById('regionCard');
+                const regionSelect = regionCard.querySelector('select');
+                regionSelect.disabled = false;
+                expandCard(regionCard);
+
+                // Try to auto-select if there's only one region available
+                if (autoSelectOnlyOption(regionSelect)) {
+                    collapseCard(regionCard, regionSelect.options[regionSelect.selectedIndex].text);
+                    enableNextCard(regionCard);
+                }
+
+                checkFormCompletion();
+            });
+
+            function updateRegions(provider) {
+                console.log('Updating regions for provider:', provider);
+                const regionSelect = document.getElementById('region');
+                regionSelect.innerHTML = '';
+                addPlaceholder(regionSelect, 'Region');
+                if (providers[provider] && providers[provider].regions) {
+                    console.log('Available regions:', providers[provider].regions);
+                    providers[provider].regions.forEach(region => {
+                        const option = document.createElement('option');
+                        option.value = region.id;
+                        option.textContent = region.name;
+                        if (!region.available) {
+                            option.disabled = true;
+                            option.textContent += ' (Not Available)';
+                        }
+                        regionSelect.appendChild(option);
+                    });
+
+                    // Auto-select if only one region is available
+                    setTimeout(() => {
+                        const regionCard = document.getElementById('regionCard');
+                        if (autoSelectOnlyOption(regionSelect)) {
+                            collapseCard(regionCard, regionSelect.options[regionSelect.selectedIndex].text);
+                            enableNextCard(regionCard);
+                        }
+                    }, 0);
+                } else {
+                    console.log('No regions found for provider:', provider);
+                }
+            }
+
+            function updateSizes(provider, imageId = null) {
+                const sizeSelect = document.getElementById('size');
+                // Store the current value if possible
+                const currentValue = sizeSelect.value;
+
+                sizeSelect.innerHTML = '<option value="" disabled selected>Select Size</option>';
+
+                if (!provider) return;
+
+                // Get the current region if one is selected
+                const regionSelect = document.getElementById('region');
+                const region = regionSelect ? regionSelect.value : '';
+
+                // If an image is selected, fetch compatible sizes from the API
+                if (imageId) {
+                    // Call API to get compatible sizes with region parameter added
+                    let apiUrl = `/api/cloud/${provider}/compatible-sizes?imageId=${encodeURIComponent(imageId)}`;
+
+                    // Add region parameter if one is selected
+                    if (region) {
+                        apiUrl += `&region=${encodeURIComponent(region)}`;
+                    }
+
+                    fetch(apiUrl)
+                        .then(response => response.json())
+                        .then(compatibleSizes => {
+                            renderSizes(provider, compatibleSizes, currentValue);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching compatible sizes:', error);
+                            // Fallback to all sizes if API fails
+                            renderSizes(provider, providers[provider].sizes, currentValue);
+                        });
+                } else {
+                    // If no image selected, use all sizes
+                    renderSizes(provider, providers[provider].sizes, currentValue);
+                }
+            }
+
+            function renderSizes(provider, sizes, currentValue = '') {
+                const sizeSelect = document.getElementById('size');
+                sizeSelect.innerHTML = '<option value="" disabled selected>Select Size</option>';
+
+                if (!sizes || sizes.length === 0) {
+                    sizeSelect.innerHTML += '<option value="" disabled>No compatible sizes available for this selection</option>';
+
+                    // Show a warning message if we're dealing with AWS
+                    if (provider === 'AWS') {
+                        const sizeCard = document.getElementById('sizeCard');
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'compatibility-warning';
+                        warningDiv.innerHTML = `
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Compatibility Issue:</strong> No compatible instance types found for this combination 
+                                of region and image. This could be because:
+                                <ul>
+                                    <li>The selected instance type is not available in this region</li>
+                                    <li>The image architecture (ARM/x86_64) is incompatible with available instance types</li>
+                                </ul>
+                                Try selecting a different region or image.
+                            </div>
+                        `;
+
+                        // Remove any existing warnings first
+                        const existingWarning = sizeCard.querySelector('.compatibility-warning');
+                        if (existingWarning) {
+                            existingWarning.remove();
+                        }
+
+                        sizeCard.querySelector('.component-details').appendChild(warningDiv);
+                    }
+
+                    return;
+                }
+
+                // Remove any existing warnings
+                const sizeCard = document.getElementById('sizeCard');
+                const existingWarning = sizeCard.querySelector('.compatibility-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+
+                // Sort sizes by price or size
+                const sortedSizes = [...sizes].sort((a, b) => {
+                    // First categorize by size (micro, small, medium, large, etc.)
+                    const sizeOrder = ['micro', 'small', 'medium', 'large', 'xlarge'];
+                    const aSize = sizeOrder.findIndex(s => a.id.toLowerCase().includes(s));
+                    const bSize = sizeOrder.findIndex(s => b.id.toLowerCase().includes(s));
+
+                    if (aSize !== -1 && bSize !== -1) {
+                        return aSize - bSize;
+                    }
+
+                    // Fall back to alphabetical sorting by ID
+                    return a.id.localeCompare(b.id);
+                });
+
+                sortedSizes.forEach(size => {
+                    const option = document.createElement('option');
+                    option.value = size.id;
+                    option.textContent = size.description || size.name;
+
+                    // If this was the previously selected value and it's still available, select it
+                    if (currentValue === size.id) {
+                        option.selected = true;
+                    }
+                    sizeSelect.appendChild(option);
+                });
+
+                // Add helpful information about AWS sizes if needed
+                if (provider === 'AWS' && sortedSizes.length > 0) {
+                    const sizeInfo = document.createElement('div');
+                    sizeInfo.className = 'size-info';
+                    sizeInfo.innerHTML = `
+                        <div class="size-info-text mt-2">
+                            <small class="text-muted">
+                                <strong>Note:</strong> Only instance types compatible with the selected image and available 
+                                in the selected region are shown.
+                            </small>
+                        </div>
+                    `;
+
+                    // Remove existing size info if any
+                    const existingSizeInfo = sizeCard.querySelector('.size-info');
+                    if (existingSizeInfo) {
+                        existingSizeInfo.remove();
+                    }
+
+                    sizeCard.querySelector('.component-details').appendChild(sizeInfo);
+                }
+
+                // If we had a previous value that's no longer available, trigger change event
+                // to ensure downstream fields are updated
+                if (currentValue && !Array.from(sizeSelect.options).some(opt => opt.value === currentValue && opt.selected)) {
+                    sizeSelect.dispatchEvent(new Event('change'));
+                }
+
+                updateSizeCard(provider);
+            }
+
+            function updateImages(provider, region = null) {
+                const imageSelect = document.getElementById('imageId');
+                const imageCard = document.getElementById('imageCard');
+                const searchInput = imageCard.querySelector('.image-search-input');
+                // Store the current value if possible
+                const currentValue = imageSelect.value;
+
+                // Clear previous options and search
+                imageSelect.innerHTML = '<option value="" disabled selected>Select Image</option>';
+                searchInput.value = '';
+                searchInput.style.display = 'none';
+
+                if (!provider) return;
+
+                let filteredImages = providers[provider].images;
+
+                // Filter images by region if a region is selected
+                if (region && region !== '') {
+                    filteredImages = filteredImages.filter(image =>
+                        image.regions && image.regions.includes(region)
+                    );
+
+                    console.log(`Filtered images for region ${region}: ${filteredImages.length} available`);
+                }
+
+                if (filteredImages.length === 0) {
+                    imageSelect.innerHTML += '<option value="" disabled>No images available for this region</option>';
+
+                    // Display a warning for AWS if no images are available
+                    if (provider === 'AWS') {
+                        const warningDiv = document.createElement('div');
+                        warningDiv.className = 'region-compatibility-warning';
+                        warningDiv.innerHTML = `
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Region Compatibility:</strong> No compatible images found for the selected region.
+                                This is likely because AMIs are region-specific. Please select a different region or contact
+                                your administrator to add AMIs for this region.
+                            </div>
+                        `;
+
+                        // Remove any existing warnings first
+                        const existingWarning = imageCard.querySelector('.region-compatibility-warning');
+                        if (existingWarning) {
+                            existingWarning.remove();
+                        }
+
+                        imageCard.querySelector('.component-details').appendChild(warningDiv);
+                    }
+
+                    return;
+                }
+
+                // Remove any existing warnings
+                const existingWarning = imageCard.querySelector('.region-compatibility-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+
+                // Log images data for debugging
+                console.log(`Provider ${provider} images:`, filteredImages);
+
+                // Sort images by distribution and name
+                const sortedImages = [...filteredImages].sort((a, b) => {
+                    // First sort by distribution
+                    const distCompare = (a.distribution || '').localeCompare(b.distribution || '');
+                    if (distCompare !== 0) return distCompare;
+                    // Then by name
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+
+                let imageCount = 0;
+                sortedImages.forEach(image => {
+                    const option = document.createElement('option');
+
+                    // For AWS images, the ID should be a string starting with 'ami-'
+                    if (provider === 'AWS' && (!image.id || image.id === 'null')) {
+                        console.warn('Found AWS image with null ID:', image);
+                        // Skip images with null/invalid IDs
+                        return;
+                    }
+
+                    // Handle both string and object IDs
+                    let imageId = image.id;
+                    if (imageId === null || imageId === undefined) {
+                        console.warn('Image has null ID:', image);
+                        return; // Skip this image
+                    }
+
+                    // Convert to string if needed
+                    imageId = String(imageId);
+
+                    option.value = imageId;
+
+                    // For AWS, add architecture info to the label
+                    if (provider === 'AWS') {
+                        const arch = image.architecture ||
+                            (image.description && image.description.toLowerCase().includes('arm') ? 'arm64' : 'x86_64');
+                        option.textContent = `${image.distribution || 'Unknown'} - ${image.name || imageId} (${arch})`;
+
+                        // Store architecture as data attribute for filtering
+                        option.dataset.architecture = arch;
+                    } else {
+                        option.textContent = `${image.distribution || 'Unknown'} - ${image.name || imageId}`;
+                    }
+
+                    // Debug info
+                    console.log(`Adding image option: ${option.textContent}, id: ${option.value}`);
+
+                    // If this was the previously selected value and it's still available, select it
+                    if (currentValue === imageId) {
+                        option.selected = true;
+                    }
+                    imageSelect.appendChild(option);
+                    imageCount++;
+                });
+
+                // Show search input only if there are enough images to warrant searching
+                if (imageCount > 10) {
+                    searchInput.style.display = 'block';
+                } else {
+                    searchInput.style.display = 'none';
+                }
+
+                // Add filtering logic
+                searchInput.addEventListener('input', function () {
+                    const searchTerm = this.value.toLowerCase();
+                    const options = imageSelect.options;
+
+                    for (let i = 0; i < options.length; i++) {
+                        const option = options[i];
+                        // Skip the placeholder option
+                        if (option.disabled) {
+                            continue;
+                        }
+                        const optionText = option.textContent.toLowerCase();
+                        if (optionText.includes(searchTerm)) {
+                            option.style.display = '';
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    }
+                });
+
+                // Add helpful region compatibility note for AWS
+                if (provider === 'AWS' && region) {
+                    const regionNote = document.createElement('div');
+                    regionNote.className = 'region-note';
+                    regionNote.innerHTML = `
+                        <div class="region-note-text mt-2">
+                            <small class="text-muted">
+                                <strong>Note:</strong> AMIs are region-specific. Only images compatible with
+                                region ${region} are shown.
+                            </small>
+                        </div>
+                    `;
+
+                    // Remove existing note if any
+                    const existingNote = imageCard.querySelector('.region-note');
+                    if (existingNote) {
+                        existingNote.remove();
+                    }
+
+                    imageCard.querySelector('.component-details').appendChild(regionNote);
+                }
+
+                // If we had a previous value that's no longer available, trigger change event
+                // to ensure downstream fields are updated
+                if (currentValue && !Array.from(imageSelect.options).some(opt => opt.value === currentValue && opt.selected)) {
+                    imageSelect.dispatchEvent(new Event('change'));
+                }
+
+                updateImageCard(provider);
+
+                console.log('Updated images for provider:', provider, 'images:', imageSelect.innerHTML);
+            }
+
+            function updateSizeCard(provider) {
+                const sizeSelect = document.getElementById('size');
+                const sizeCard = document.getElementById('sizeCard');
+
+                // Auto-select if only one size is available
+                setTimeout(() => {
+                    if (autoSelectOnlyOption(sizeSelect)) {
+                        collapseCard(sizeCard, sizeSelect.options[sizeSelect.selectedIndex].text);
+                        enableNextCard(sizeCard);
+                    }
+                }, 0);
+            }
+
+            function updateImageCard(provider) {
+                const imageSelect = document.getElementById('imageId');
+                const imageCard = document.getElementById('imageCard');
+
+                // Auto-select if only one image is available
+                setTimeout(() => {
+                    if (autoSelectOnlyOption(imageSelect)) {
+                        collapseCard(imageCard, imageSelect.options[imageSelect.selectedIndex].text);
+                        enableNextCard(imageCard);
+                    }
+                }, 0);
+
+                console.log('Updated images for provider:', provider, 'images:', imageSelect.innerHTML);
+            }
+
+            function addPlaceholder(select, name) {
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = `Select ${name}`;
+                placeholder.selected = true;
+                placeholder.disabled = true;
+                select.appendChild(placeholder);
+            }
+
+            // Auto-select for SSH Key if only one is available
+            const sshKeySelect = document.getElementById('sshKeyId');
+            if (sshKeySelect) {
+                const sshKeyCard = document.getElementById('sshKeyCard');
+                if (autoSelectOnlyOption(sshKeySelect) && sshKeyCard) {
+                    collapseCard(sshKeyCard, sshKeySelect.options[sshKeySelect.selectedIndex].text);
+                    enableNextCard(sshKeyCard);
+                }
+            }
+
+            // Initial population of regions based on the default provider
+            updateRegions(providerSelect.value);
+
+            // Form submission validation
+            document.querySelector('.instance-form').addEventListener('submit', function (e) {
+                const provider = document.getElementById('provider').value;
+                const imageId = document.getElementById('imageId').value;
+                const size = document.getElementById('size').value;
+                const region = document.getElementById('region').value;
+                const name = document.getElementById('name').value;
+                const sshKeyId = document.getElementById('sshKeyId').value;
+
+                // Check that all required fields are completed
+                if (!provider || !region || !imageId || !size || !name) {
+                    e.preventDefault();
+                    alert('Please complete all required fields: Provider, Region, Image, Size, and Name');
+                    return false;
+                }
+
+                // For AWS, perform additional validation of region/instance compatibility
+                if (provider === 'AWS') {
+                    // Verify image and size compatibility 
+                    const sizeSelect = document.getElementById('size');
+                    const imageSelect = document.getElementById('imageId');
+
+                    // If there are no sizes available (no options except the placeholder)
+                    if (sizeSelect.options.length <= 1) {
+                        e.preventDefault();
+                        alert('There are no compatible instance types available for this region and image combination. ' +
+                            'Please select a different region or image.');
+                        return false;
+                    }
+
+                    // Add hidden fields to ensure the form correctly submits the values
+                    const currentImageId = document.getElementById('imageId').value;
+                    if (currentImageId && currentImageId !== 'null' &&
+                        !document.querySelector('input[name="imageId"][type="hidden"]')) {
+                        const hiddenImageInput = document.createElement('input');
+                        hiddenImageInput.type = 'hidden';
+                        hiddenImageInput.name = 'imageId';
+                        hiddenImageInput.value = currentImageId;
+                        this.appendChild(hiddenImageInput);
+                    }
+
+                    if (size && !document.querySelector('input[name="size"][type="hidden"]')) {
+                        const hiddenSizeInput = document.createElement('input');
+                        hiddenSizeInput.type = 'hidden';
+                        hiddenSizeInput.name = 'size';
+                        hiddenSizeInput.value = size;
+                        this.appendChild(hiddenSizeInput);
+                    }
+
+                    if (region && !document.querySelector('input[name="region"][type="hidden"]')) {
+                        const hiddenRegionInput = document.createElement('input');
+                        hiddenRegionInput.type = 'hidden';
+                        hiddenRegionInput.name = 'region';
+                        hiddenRegionInput.value = region;
+                        this.appendChild(hiddenRegionInput);
+                    }
+
+                    // Final validation check - make one last API call to verify compatibility
+                    fetch(`/api/cloud/AWS/verify-compatibility?imageId=${encodeURIComponent(imageId)}&region=${encodeURIComponent(region)}&instanceType=${encodeURIComponent(size)}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Compatibility check failed');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.compatible) {
+                                // Submit the form programmatically
+                                this.submit();
+                            } else {
+                                alert(`Cannot create instance: ${data.message}`);
+                            }
+                        })
+                        .catch(error => {
+                            // If the API call fails, default to allowing the submission
+                            // since we already validated with frontend logic
+                            this.submit();
+                        });
+
+                    // Prevent default form submission since we're handling it with fetch
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+
+        /*]]>*/
+    </script>
+</body>
+
+</html>

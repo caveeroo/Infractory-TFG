@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Docker Config Assignments</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="row mb-4">
+            <div class="col">
+                <h1>Assignments for Config: <span th:text="${config.name}"></span></h1>
+                <p class="text-muted">Manage where this Docker configuration is deployed</p>
+            </div>
+        </div>
+
+        <!-- Current Assignments -->
+        <div class="row mb-4">
+            <div class="col">
+                <h3>Current Assignments</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Target</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="assignment : ${assignments}">
+                            <td th:text="${assignment.targetType}"></td>
+                            <td>
+                                <span th:if="${assignment.targetType.name() == 'SERVER_TYPE'}"
+                                    th:text="${assignment.serverType}"></span>
+                                <span th:if="${assignment.targetType.name() == 'INSTANCE_SPECIFIC'}"
+                                    th:text="${assignment.instance.id + ' (' + assignment.instance.name + ')'}"></span>
+                            </td>
+                            <td>
+                                <form th:action="@{/docker/assignments/{id}/delete(id=${assignment.id})}" method="post">
+                                    <input type="hidden" name="configId" th:value="${config.id}" />
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr th:if="${assignments.empty}">
+                            <td colspan="3" class="text-center">No assignments yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Create Server Type Assignment -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Assign to Server Type</h4>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/docker/configs/{id}/assign-to-type(id=${config.id})}" method="post">
+                            <div class="mb-3">
+                                <label for="serverType" class="form-label">Server Type</label>
+                                <select class="form-select" id="serverType" name="serverType" required>
+                                    <option value="">Select server type...</option>
+                                    <option th:each="type : ${serverTypes}" th:value="${type}" th:text="${type}">
+                                    </option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Assign</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Instance Assignment -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h4>Assign to Specific Instance</h4>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/docker/configs/{id}/assign-to-instance(id=${config.id})}" method="post">
+                            <div class="mb-3">
+                                <label for="instanceId" class="form-label">Instance</label>
+                                <select class="form-select" id="instanceId" name="instanceId" required>
+                                    <option value="">Select instance...</option>
+                                    <option th:each="instance : ${instances}" th:value="${instance.id}"
+                                        th:text="${instance.id + ' (' + instance.name + ')'}"></option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Assign</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <a th:href="@{/docker/configs}" class="btn btn-secondary">Back to Configs</a>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

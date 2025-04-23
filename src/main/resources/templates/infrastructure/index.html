@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Infrastructure'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<style>
+    .nebula-badge {
+        background-color: #007bff;
+        color: white;
+        font-weight: normal;
+        padding: 0.25em 0.6em;
+        border-radius: 0.25rem;
+        font-size: 0.85em;
+    }
+
+    .vpn-icon {
+        margin-right: 4px;
+        font-size: 0.9em;
+    }
+</style>
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <!-- Infrastructure Description -->
+                <div
+                    th:replace="~{fragments/page-description :: description('Track and manage your infrastructure components across different cloud providers and regions.')}">
+                </div>
+
+                <div class="infrastructure-map" id="infrastructureMap">
+                    <div th:each="column : ${columns}" class="category">
+                        <div class="category-title" th:text="${column.getTitle()}"></div>
+                        <div class="components">
+                            <div th:each="component : ${column.getComponents()}" class="infrastructure-column">
+                                <div class="infrastructure-component"
+                                    th:id="${'component-' + (component.getInstance() != null and component.getInstance().getIp() != null ? component.getInstance().getIp().toString().replace('.', '-') : 'unknown')}">
+                                    <div class="badge-group">
+                                        <span class="badge" th:if="${component.class.simpleName == 'Redirector'}"
+                                            th:classappend="'badge redirector'">Redirector</span>
+                                        <span class="badge"
+                                            th:if="${component.class.simpleName == 'Redirector' and component.protocol != null}"
+                                            th:classappend="protocol"><span
+                                                th:text="${component.protocol}"></span></span>
+                                        <span class="badge" th:if="${component.class.simpleName == 'Server'}"
+                                            th:classappend="'badge server'">Server</span>
+                                        <span class="badge" th:if="${component.class.simpleName == 'TeamServer'}"
+                                            th:classappend="'badge server'">Team Server</span>
+                                        <span class="badge" th:if="${component.class.simpleName == 'Phishing'}"
+                                            th:classappend="'badge server'">Phishing</span>
+                                    </div>
+                                    <span class="badge online"
+                                        th:if="${component.isOnline() != null and component.isOnline()}">
+                                        <span class="badge-wrap">
+                                            <span class="badge-icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                    viewBox="0 0 14 14">
+                                                    <path
+                                                        d="M7 2.333c2.577 0 4.667 2.09 4.667 4.667S9.577 11.667 7 11.667 2.333 9.577 2.333 7 4.423 2.333 7 2.333zm0 1.05c-1.997 0-3.617 1.62-3.617 3.617 0 1.997 1.62 3.617 3.617 3.617 1.997 0 3.617-1.62 3.617-3.617 0-1.997-1.62-3.617-3.617-3.617z" />
+                                                </svg>
+                                                <span class="badge-icon-inner">
+                                                    <svg aria-hidden="true" focusable="false" viewbox="0 0 14 14">
+                                                        <path
+                                                            d="M7 9.567c1.418 0 2.567-1.15 2.567-2.567 0-1.418-1.15-2.567-2.567-2.567-1.418 0-2.567 1.15-2.567 2.567 0 1.418 1.15 2.567 2.567 2.567z" />
+                                                    </svg>
+                                                </span>
+                                            </span>
+                                            <span class="badge-text">LIVE</span>
+                                        </span>
+                                    </span>
+                                    <span class="badge offline"
+                                        th:if="${component.isOnline() != null and !component.isOnline()}">
+                                        <span class="badge-wrap">
+                                            <span class="badge-icon">
+                                                <!-- SVG content -->
+                                            </span>
+                                            <span class="badge-text">DOWN</span>
+                                        </span>
+                                    </span>
+                                    <div class="component-name"
+                                        th:text="${component.getDetails() != null ? component.getDetails().getDescription() : ''}">
+                                    </div>
+                                    <div class="component-details">
+                                        <div class="detail-item"><strong>IP:</strong> <span
+                                                th:text="${component.getInstance() != null and component.getInstance().getIp() != null ? component.getInstance().getIp().toString() : 'N/A'}"></span>
+                                        </div>
+                                        <div class="detail-item"><strong>Nebula IP:</strong>
+                                            <span
+                                                th:if="${component.getVpn() != null and component.getVpn().getIp() != null}"
+                                                class="badge badge-info nebula-badge">
+                                                <span class="vpn-icon">🔒</span> <span
+                                                    th:text="${component.getVpn().getIpWithSubnet()}"></span>
+                                            </span>
+                                            <span
+                                                th:unless="${component.getVpn() != null and component.getVpn().getIp() != null}">N/A</span>
+                                        </div>
+                                        <div class="detail-item"><strong>Server Provider:</strong> <span
+                                                th:text="${component.getInstance() != null and component.getInstance().getProvider() != null ? component.getInstance().getProvider().getName() : 'N/A'}"></span>
+                                        </div>
+                                        <div class="detail-item"><strong>Region:</strong> <span
+                                                th:text="${component.getInstance() != null ? component.getInstance().getRegion() : 'N/A'}"></span>
+                                        </div>
+                                        <div class="detail-item" th:if="${component.getActivedomain() != null}">
+                                            <strong>Domain:</strong> <span
+                                                th:text="${component.getActivedomain().getDomain()}"></span>
+                                        </div>
+                                        <div class="detail-item"
+                                            th:if="${component.getActivedomain() != null and component.getActivedomain().getProvider() != null}">
+                                            <strong>Domain Provider:</strong> <span
+                                                th:text="${component.getActivedomain().getProvider().getName()}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-center mt-4 mb-4">
+                    <div class="btn-group">
+                        <a href="/infrastructure/edit" class="btn btn-primary infra-btn">Edit Infrastructure</a>
+                        <a href="/infrastructure/create" class="btn btn-primary infra-btn">Create New Server</a>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+
+</html>

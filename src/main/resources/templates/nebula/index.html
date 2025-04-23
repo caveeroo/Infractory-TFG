@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='Nebula Management'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/nebula-management.css}">
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="nebula-container">
+                    <!-- Nebula Network Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Configure and manage your secure Nebula mesh network connecting infrastructure across different cloud providers.')}">
+                    </div>
+
+                    <!-- Network Overview -->
+                    <div class="network-overview infrastructure-component">
+                        <div class="network-stats">
+                            <div class="stat-card stat-1">
+                                <h3>Total Nodes</h3>
+                                <p class="stat-value" th:text="${#lists.size(nebulaConfigs)}">0</p>
+                            </div>
+                            <div class="stat-card stat-2">
+                                <h3>Lighthouses</h3>
+                                <p class="stat-value" th:text="${#lists.size(nebulaConfigs.?[lighthouse])}">0</p>
+                            </div>
+                            <div class="stat-card stat-3">
+                                <h3>Active Roles</h3>
+                                <p class="stat-value" th:text="${totalUniqueRoles}">0</p>
+                            </div>
+                        </div>
+
+                        <!-- Network Visualization -->
+                        <div class="network-visualization">
+                            <div class="visualization-container">
+                                <div class="lighthouse-nodes">
+                                    <div th:each="config : ${nebulaConfigs}" th:if="${config.lighthouse}"
+                                        class="node lighthouse" th:data-ip="${config.ip}">
+                                        <div class="node-icon">🏠</div>
+                                        <span class="node-label" th:text="${config.ip}"></span>
+                                        <div class="node-roles">
+                                            <span th:each="role : ${config.roles}" class="role-badge"
+                                                th:text="${role}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="regular-nodes">
+                                    <div th:each="config : ${nebulaConfigs}" th:unless="${config.lighthouse}"
+                                        class="node regular" th:data-ip="${config.ip}">
+                                        <div class="node-icon">💻</div>
+                                        <span class="node-label" th:text="${config.ip}"></span>
+                                        <div class="node-roles">
+                                            <span th:each="role : ${config.roles}" class="role-badge"
+                                                th:text="${role}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nebula Configurations -->
+                    <div class="nebula-configs infrastructure-component">
+                        <div class="component-header">
+                            <h2 class="section-title">Network Configurations</h2>
+                            <a th:href="@{/nebula/create}" class="infra-btn">Create New Configuration</a>
+                        </div>
+                        <div class="configs-grid">
+                            <div th:if="${#lists.isEmpty(nebulaConfigs)}" class="empty-state">
+                                <p>No Nebula configurations found. Create your first configuration to get started.</p>
+                            </div>
+                            <div th:each="nebulaConfig : ${nebulaConfigs}" class="config-card">
+                                <div class="config-header">
+                                    <span th:if="${nebulaConfig.lighthouse}" class="badge lighthouse">Lighthouse</span>
+                                    <h3 class="config-ip" th:text="${nebulaConfig.ip}"></h3>
+                                </div>
+                                <div class="config-details">
+                                    <div class="detail-group">
+                                        <label>Roles:</label>
+                                        <div class="roles-list">
+                                            <span th:each="role : ${nebulaConfig.roles}" class="role-badge"
+                                                th:text="${role}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-group">
+                                        <label>Allowed CIDRs:</label>
+                                        <div class="cidrs-list">
+                                            <span th:each="cidr : ${nebulaConfig.allowedCIDRs}" class="cidr-badge"
+                                                th:text="${cidr}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-group">
+                                        <label>Allowed Roles:</label>
+                                        <div class="roles-list">
+                                            <span th:each="role : ${nebulaConfig.allowedRoles}"
+                                                class="role-badge allowed" th:text="${role}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="config-actions">
+                                    <form th:action="@{/nebula/{id}(id=${nebulaConfig.id})}" method="post"
+                                        class="delete-form">
+                                        <input type="hidden" name="_method" value="delete" />
+                                        <button type="submit" class="infra-btn danger">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <script th:src="@{/js/nebula-visualization.js}"></script>
+</body>
+
+</html>

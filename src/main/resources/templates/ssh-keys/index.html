@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:with="pageTitle='SSH Keys'">
+
+<head th:replace="~{fragments/head :: head}"></head>
+<link rel="stylesheet" th:href="@{/css/ssh-keys-management.css}">
+<link rel="stylesheet" th:href="@{/css/shared-components.css}">
+
+<body>
+    <div th:replace="~{fragments/header :: header}"></div>
+    <div class="container-fluid">
+        <div class="row flex-grow-1">
+            <div th:replace="~{fragments/sidebar :: sidebar}"></div>
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 main">
+                <div class="ssh-keys-container">
+                    <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+                    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+
+                    <!-- SSH Keys Description -->
+                    <div
+                        th:replace="~{fragments/page-description :: description('Manage SSH key pairs to securely connect to and authenticate with your infrastructure instances.')}">
+                    </div>
+
+                    <div class="ssh-keys-grid">
+                        <div th:if="${#lists.isEmpty(sshKeys)}">
+                            <p>No SSH keys found.</p>
+                        </div>
+                        <div th:each="sshKey : ${sshKeys}" class="infrastructure-component">
+                            <h2 class="component-name" th:text="${sshKey.name}"></h2>
+                            <div class="component-details">
+                                <p class="ssh-key-fingerprint" th:text="${sshKey.publicKey}"></p>
+                                <form th:action="@{/ssh-keys/{id}/delete(id=${sshKey.id})}" method="post"
+                                    class="delete-form">
+                                    <button type="submit" class="infra-btn btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="create-ssh-key-form" class="ssh-key-form">
+                        <h2 class="ssh-key-subtitle">Add New SSH Key</h2>
+                        <form th:action="@{/ssh-keys/create}" method="post">
+                            <div class="form-group">
+                                <label for="name">Name:</label>
+                                <input type="text" id="name" name="name" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="publicKey">Public Key:</label>
+                                <textarea id="publicKey" name="publicKey" class="form-control" rows="5"
+                                    required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="privateKey">Private Key:</label>
+                                <textarea id="privateKey" name="privateKey" class="form-control" rows="5"
+                                    required></textarea>
+                            </div>
+                            <button type="submit" class="infra-btn">Add SSH Key</button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+
+</html>
