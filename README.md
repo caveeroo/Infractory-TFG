@@ -29,7 +29,7 @@ Get Infractory up and running in a few steps:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/caveeroo/Infractory.git](https://github.com/caveeroo/Infractory.git)
+    git clone [https://github.com/caveeroo/Infractory-TFG.git](https://github.com/caveeroo/Infractory-TFG.git)
     cd Infractory
     ```
 
