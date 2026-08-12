@@ -1,0 +1,20 @@
+{
+  "name": "infractory-v2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Infractory v2 self-hosted infrastructure control plane",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "predev": "pnpm --filter @infractory/contracts build",
+    "dev": "pnpm --parallel --filter @infractory/control-plane --filter @infractory/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm --filter @infractory/contracts build && pnpm --filter @infractory/control-plane typecheck && pnpm --filter @infractory/web typecheck",
+    "test": "pnpm -r test",
+    "verify": "./scripts/verify-workspace-boundary.sh && pnpm --filter @infractory/contracts check:generated && pnpm typecheck && pnpm test && pnpm build && ./scripts/verify-agent.sh && ./scripts/verify-compose.sh",
+    "db:migrate": "pnpm --filter @infractory/control-plane db:migrate",
+    "db:rollback": "pnpm --filter @infractory/control-plane db:rollback"
+  }
+}

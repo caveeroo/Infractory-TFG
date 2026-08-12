@@ -1,0 +1,29 @@
+{
+  "id": "single-node",
+  "version": 1,
+  "name": "Single node",
+  "description": "A compact environment with one public lighthouse and workload node.",
+  "spec": {
+    "schemaVersion": 1,
+    "name": "Untitled environment",
+    "region": "eu-west-1",
+    "network": {
+      "cidr": "10.80.0.0/24",
+      "lighthouseNodeKeys": ["primary"]
+    },
+    "nodes": [
+      {
+        "key": "primary",
+        "name": "Primary node",
+        "roles": ["lighthouse", "workload"],
+        "source": {
+          "kind": "aws",
+          "instanceType": "t3.small",
+          "architecture": "amd64",
+          "publicEndpoint": true
+        }
+      }
+    ],
+    "deployments": []
+  }
+}

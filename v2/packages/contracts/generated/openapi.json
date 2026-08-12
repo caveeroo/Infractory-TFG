@@ -1,0 +1,3096 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Infractory control plane",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/environments": {
+      "get": {
+        "operationId": "listEnvironments",
+        "responses": {
+          "200": {
+            "description": "Environment page"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createEnvironment",
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Environment"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/environments/{id}/plan": {
+      "post": {
+        "operationId": "planEnvironment",
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/environments/{id}/apply": {
+      "post": {
+        "operationId": "applyEnvironment",
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/environments/{id}/destroy": {
+      "post": {
+        "operationId": "destroyEnvironment",
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/{id}": {
+      "get": {
+        "operationId": "getOperation",
+        "responses": {
+          "200": {
+            "description": "Operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/{id}/events": {
+      "get": {
+        "operationId": "streamOperationEvents",
+        "responses": {
+          "200": {
+            "description": "SSE stream or event page"
+          }
+        }
+      }
+    },
+    "/agent/v1/enroll": {
+      "post": {
+        "operationId": "enrollAgent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollAgentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enrolled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollAgentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent/v1/heartbeat": {
+      "post": {
+        "operationId": "heartbeat",
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Accepted"
+          }
+        }
+      }
+    },
+    "/agent/v1/tasks/next": {
+      "get": {
+        "operationId": "nextAgentTask",
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leased task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTask"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No task"
+          }
+        }
+      }
+    },
+    "/agent/v1/nebula-certificate-requests": {
+      "post": {
+        "operationId": "requestNebulaCertificate",
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NebulaCertificateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed certificate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NebulaCertificateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentCapabilities": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "os",
+          "architecture",
+          "dockerVersion",
+          "composeVersion",
+          "tunAvailable",
+          "ntpSynchronized",
+          "clockOffsetSeconds"
+        ],
+        "properties": {
+          "os": {
+            "anyOf": [
+              {
+                "const": "ubuntu-22.04",
+                "type": "string"
+              },
+              {
+                "const": "ubuntu-24.04",
+                "type": "string"
+              },
+              {
+                "const": "debian-12",
+                "type": "string"
+              }
+            ]
+          },
+          "architecture": {
+            "anyOf": [
+              {
+                "const": "amd64",
+                "type": "string"
+              },
+              {
+                "const": "arm64",
+                "type": "string"
+              }
+            ]
+          },
+          "dockerVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "composeVersion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tunAvailable": {
+            "type": "boolean"
+          },
+          "ntpSynchronized": {
+            "type": "boolean"
+          },
+          "clockOffsetSeconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "AgentTask": {
+        "$id": "AgentTask",
+        "anyOf": [
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "InspectHost",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "EnsurePrerequisites",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "required": [
+                  "docker",
+                  "nebula"
+                ],
+                "properties": {
+                  "docker": {
+                    "type": "boolean"
+                  },
+                  "nebula": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "EnsureNebula",
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "environmentId",
+                  "cidr",
+                  "lighthouse",
+                  "groups"
+                ],
+                "properties": {
+                  "environmentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "cidr": {
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "lighthouse": {
+                    "type": "boolean"
+                  },
+                  "groups": {
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    }
+                  },
+                  "certificate": {
+                    "type": "string"
+                  },
+                  "caCertificate": {
+                    "type": "string"
+                  },
+                  "config": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "ApplyWorkload",
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "environmentId",
+                  "deploymentId",
+                  "generation",
+                  "composeYaml",
+                  "resolvedImages",
+                  "secretFiles",
+                  "allowedPorts",
+                  "probes",
+                  "timeoutSeconds"
+                ],
+                "properties": {
+                  "environmentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "deploymentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "generation": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "composeYaml": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "resolvedImages": {
+                    "type": "object",
+                    "patternProperties": {
+                      "^(.*)$": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "secretFiles": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "target",
+                        "contentBase64"
+                      ],
+                      "properties": {
+                        "target": {
+                          "type": "string"
+                        },
+                        "contentBase64": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "allowedPorts": {
+                    "type": "array",
+                    "items": {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "protocol",
+                        "port",
+                        "allowedCidrs"
+                      ],
+                      "properties": {
+                        "protocol": {
+                          "anyOf": [
+                            {
+                              "const": "tcp",
+                              "type": "string"
+                            },
+                            {
+                              "const": "udp",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "port": {
+                          "minimum": 1,
+                          "maximum": 65535,
+                          "type": "integer"
+                        },
+                        "allowedCidrs": {
+                          "type": "array",
+                          "items": {
+                            "minLength": 1,
+                            "maxLength": 255,
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "probes": {
+                    "maxItems": 32,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "target",
+                            "timeoutSeconds"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "container",
+                              "type": "string"
+                            },
+                            "target": {
+                              "minLength": 1,
+                              "maxLength": 255,
+                              "type": "string"
+                            },
+                            "timeoutSeconds": {
+                              "minimum": 1,
+                              "maximum": 60,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "target",
+                            "timeoutSeconds"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "http",
+                              "type": "string"
+                            },
+                            "target": {
+                              "pattern": "^https?://",
+                              "type": "string"
+                            },
+                            "timeoutSeconds": {
+                              "minimum": 1,
+                              "maximum": 60,
+                              "type": "integer"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "target",
+                            "timeoutSeconds"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "tcp",
+                              "type": "string"
+                            },
+                            "target": {
+                              "pattern": "^[^:]+:[0-9]{1,5}$",
+                              "type": "string"
+                            },
+                            "timeoutSeconds": {
+                              "minimum": 1,
+                              "maximum": 60,
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "timeoutSeconds": {
+                    "minimum": 1,
+                    "maximum": 900,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "RemoveWorkload",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "required": [
+                  "deploymentId",
+                  "removeOwnedVolumes"
+                ],
+                "properties": {
+                  "deploymentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "removeOwnedVolumes": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "CollectObservation",
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "includeWorkloads"
+                ],
+                "properties": {
+                  "includeWorkloads": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "CleanupNode",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "required": [
+                  "environmentId"
+                ],
+                "properties": {
+                  "environmentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "TailWorkloadLogs",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "required": [
+                  "deploymentId"
+                ],
+                "properties": {
+                  "deploymentId": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "since": {
+                    "format": "date-time",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "RotateDeviceToken",
+                "type": "string"
+              },
+              "payload": {
+                "additionalProperties": false,
+                "type": "object",
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "taskId",
+              "actionKey",
+              "nodeGeneration",
+              "attempt",
+              "leaseToken",
+              "leaseExpiresAt",
+              "deadline",
+              "kind",
+              "payload"
+            ],
+            "properties": {
+              "taskId": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "actionKey": {
+                "minLength": 1,
+                "maxLength": 255,
+                "type": "string"
+              },
+              "nodeGeneration": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "attempt": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "leaseToken": {
+                "minLength": 32,
+                "type": "string"
+              },
+              "leaseExpiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "deadline": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "kind": {
+                "const": "UpgradeAgent",
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "required": [
+                  "version",
+                  "url",
+                  "sha256"
+                ],
+                "properties": {
+                  "version": {
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "url": {
+                    "format": "uri",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[a-f0-9]{64}$",
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "CompleteTaskRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "leaseToken",
+          "outcome",
+          "result"
+        ],
+        "properties": {
+          "leaseToken": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "const": "succeeded",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "stale",
+                "type": "string"
+              }
+            ]
+          },
+          "result": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          },
+          "errorCode": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "errorMessage": {
+            "maxLength": 8192,
+            "type": "string"
+          }
+        }
+      },
+      "EnrollAgentRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "publicKey",
+          "capabilities"
+        ],
+        "properties": {
+          "token": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "publicKey": {
+            "minLength": 32,
+            "maxLength": 8192,
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "os",
+              "architecture",
+              "dockerVersion",
+              "composeVersion",
+              "tunAvailable",
+              "ntpSynchronized",
+              "clockOffsetSeconds"
+            ],
+            "properties": {
+              "os": {
+                "anyOf": [
+                  {
+                    "const": "ubuntu-22.04",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ubuntu-24.04",
+                    "type": "string"
+                  },
+                  {
+                    "const": "debian-12",
+                    "type": "string"
+                  }
+                ]
+              },
+              "architecture": {
+                "anyOf": [
+                  {
+                    "const": "amd64",
+                    "type": "string"
+                  },
+                  {
+                    "const": "arm64",
+                    "type": "string"
+                  }
+                ]
+              },
+              "dockerVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "composeVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tunAvailable": {
+                "type": "boolean"
+              },
+              "ntpSynchronized": {
+                "type": "boolean"
+              },
+              "clockOffsetSeconds": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "EnrollAgentResponse": {
+        "type": "object",
+        "required": [
+          "nodeId",
+          "deviceToken",
+          "expiresAt",
+          "heartbeatIntervalSeconds"
+        ],
+        "properties": {
+          "nodeId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "deviceToken": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "heartbeatIntervalSeconds": {
+            "minimum": 5,
+            "type": "integer"
+          }
+        }
+      },
+      "Environment": {
+        "$id": "Environment",
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "lifecycle",
+          "health",
+          "desiredRevision",
+          "appliedRevision",
+          "expiresAt",
+          "createdAt",
+          "updatedAt",
+          "etag",
+          "spec"
+        ],
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "lifecycle": {
+            "anyOf": [
+              {
+                "const": "draft",
+                "type": "string"
+              },
+              {
+                "const": "applying",
+                "type": "string"
+              },
+              {
+                "const": "active",
+                "type": "string"
+              },
+              {
+                "const": "apply_failed",
+                "type": "string"
+              },
+              {
+                "const": "destroying",
+                "type": "string"
+              },
+              {
+                "const": "destroyed",
+                "type": "string"
+              },
+              {
+                "const": "destroy_failed",
+                "type": "string"
+              },
+              {
+                "const": "abandoned",
+                "type": "string"
+              }
+            ]
+          },
+          "health": {
+            "anyOf": [
+              {
+                "const": "unknown",
+                "type": "string"
+              },
+              {
+                "const": "healthy",
+                "type": "string"
+              },
+              {
+                "const": "degraded",
+                "type": "string"
+              },
+              {
+                "const": "unreachable",
+                "type": "string"
+              }
+            ]
+          },
+          "desiredRevision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "appliedRevision": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "etag": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "spec": {
+            "$id": "EnvironmentSpec",
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "name",
+              "region",
+              "network",
+              "nodes",
+              "deployments"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "const": 1,
+                "type": "number"
+              },
+              "name": {
+                "minLength": 2,
+                "maxLength": 120,
+                "type": "string"
+              },
+              "expiresAt": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "region": {
+                "pattern": "^[a-z]{2}-[a-z]+-[0-9]+$",
+                "type": "string"
+              },
+              "network": {
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                  "cidr",
+                  "lighthouseNodeKeys"
+                ],
+                "properties": {
+                  "cidr": {
+                    "minLength": 9,
+                    "maxLength": 32,
+                    "type": "string"
+                  },
+                  "lighthouseNodeKeys": {
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "nodes": {
+                "minItems": 1,
+                "maxItems": 128,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "key",
+                    "name",
+                    "roles",
+                    "source"
+                  ],
+                  "properties": {
+                    "key": {
+                      "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                      "type": "string"
+                    },
+                    "name": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "roles": {
+                      "uniqueItems": true,
+                      "maxItems": 32,
+                      "type": "array",
+                      "items": {
+                        "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                        "type": "string"
+                      }
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "instanceType",
+                            "architecture",
+                            "publicEndpoint"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "aws",
+                              "type": "string"
+                            },
+                            "instanceType": {
+                              "minLength": 1,
+                              "maxLength": 255,
+                              "type": "string"
+                            },
+                            "architecture": {
+                              "const": "amd64",
+                              "type": "string"
+                            },
+                            "publicEndpoint": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "adopted",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "deployments": {
+                "maxItems": 512,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "key",
+                    "nodeKey",
+                    "workloadVersionId",
+                    "desiredState",
+                    "dependsOn",
+                    "inputs",
+                    "exposures"
+                  ],
+                  "properties": {
+                    "key": {
+                      "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                      "type": "string"
+                    },
+                    "nodeKey": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "workloadVersionId": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "desiredState": {
+                      "anyOf": [
+                        {
+                          "const": "running",
+                          "type": "string"
+                        },
+                        {
+                          "const": "stopped",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "dependsOn": {
+                      "uniqueItems": true,
+                      "type": "array",
+                      "items": {
+                        "minLength": 1,
+                        "maxLength": 255,
+                        "type": "string"
+                      }
+                    },
+                    "inputs": {
+                      "type": "object",
+                      "patternProperties": {
+                        "^(.*)$": {
+                          "anyOf": [
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "value"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "literal",
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "credentialId"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "secretRef",
+                                  "type": "string"
+                                },
+                                "credentialId": {
+                                  "format": "uuid",
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            {
+                              "additionalProperties": false,
+                              "type": "object",
+                              "required": [
+                                "kind",
+                                "nodeKey",
+                                "address"
+                              ],
+                              "properties": {
+                                "kind": {
+                                  "const": "nodeAddress",
+                                  "type": "string"
+                                },
+                                "nodeKey": {
+                                  "minLength": 1,
+                                  "maxLength": 255,
+                                  "type": "string"
+                                },
+                                "address": {
+                                  "anyOf": [
+                                    {
+                                      "const": "public",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "private",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "overlay",
+                                      "type": "string"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "exposures": {
+                      "type": "array",
+                      "items": {
+                        "additionalProperties": false,
+                        "type": "object",
+                        "required": [
+                          "protocol",
+                          "port",
+                          "allowedCidrs"
+                        ],
+                        "properties": {
+                          "protocol": {
+                            "anyOf": [
+                              {
+                                "const": "tcp",
+                                "type": "string"
+                              },
+                              {
+                                "const": "udp",
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "port": {
+                            "minimum": 1,
+                            "maximum": 65535,
+                            "type": "integer"
+                          },
+                          "allowedCidrs": {
+                            "minItems": 1,
+                            "uniqueItems": true,
+                            "type": "array",
+                            "items": {
+                              "minLength": 3,
+                              "maxLength": 64,
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "EnvironmentSpec": {
+        "$id": "EnvironmentSpec",
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "name",
+          "region",
+          "network",
+          "nodes",
+          "deployments"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "name": {
+            "minLength": 2,
+            "maxLength": 120,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "region": {
+            "pattern": "^[a-z]{2}-[a-z]+-[0-9]+$",
+            "type": "string"
+          },
+          "network": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "cidr",
+              "lighthouseNodeKeys"
+            ],
+            "properties": {
+              "cidr": {
+                "minLength": 9,
+                "maxLength": 32,
+                "type": "string"
+              },
+              "lighthouseNodeKeys": {
+                "minItems": 1,
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "nodes": {
+            "minItems": 1,
+            "maxItems": 128,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "key",
+                "name",
+                "roles",
+                "source"
+              ],
+              "properties": {
+                "key": {
+                  "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                  "type": "string"
+                },
+                "name": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "roles": {
+                  "uniqueItems": true,
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                    "type": "string"
+                  }
+                },
+                "source": {
+                  "anyOf": [
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "kind",
+                        "instanceType",
+                        "architecture",
+                        "publicEndpoint"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "aws",
+                          "type": "string"
+                        },
+                        "instanceType": {
+                          "minLength": 1,
+                          "maxLength": 255,
+                          "type": "string"
+                        },
+                        "architecture": {
+                          "const": "amd64",
+                          "type": "string"
+                        },
+                        "publicEndpoint": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    {
+                      "additionalProperties": false,
+                      "type": "object",
+                      "required": [
+                        "kind"
+                      ],
+                      "properties": {
+                        "kind": {
+                          "const": "adopted",
+                          "type": "string"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "deployments": {
+            "maxItems": 512,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "key",
+                "nodeKey",
+                "workloadVersionId",
+                "desiredState",
+                "dependsOn",
+                "inputs",
+                "exposures"
+              ],
+              "properties": {
+                "key": {
+                  "pattern": "^[a-z][a-z0-9-]{0,62}$",
+                  "type": "string"
+                },
+                "nodeKey": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "workloadVersionId": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "desiredState": {
+                  "anyOf": [
+                    {
+                      "const": "running",
+                      "type": "string"
+                    },
+                    {
+                      "const": "stopped",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "dependsOn": {
+                  "uniqueItems": true,
+                  "type": "array",
+                  "items": {
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "type": "string"
+                  }
+                },
+                "inputs": {
+                  "type": "object",
+                  "patternProperties": {
+                    "^(.*)$": {
+                      "anyOf": [
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "value"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "literal",
+                              "type": "string"
+                            },
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "credentialId"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "secretRef",
+                              "type": "string"
+                            },
+                            "credentialId": {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "additionalProperties": false,
+                          "type": "object",
+                          "required": [
+                            "kind",
+                            "nodeKey",
+                            "address"
+                          ],
+                          "properties": {
+                            "kind": {
+                              "const": "nodeAddress",
+                              "type": "string"
+                            },
+                            "nodeKey": {
+                              "minLength": 1,
+                              "maxLength": 255,
+                              "type": "string"
+                            },
+                            "address": {
+                              "anyOf": [
+                                {
+                                  "const": "public",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "private",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "overlay",
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "exposures": {
+                  "type": "array",
+                  "items": {
+                    "additionalProperties": false,
+                    "type": "object",
+                    "required": [
+                      "protocol",
+                      "port",
+                      "allowedCidrs"
+                    ],
+                    "properties": {
+                      "protocol": {
+                        "anyOf": [
+                          {
+                            "const": "tcp",
+                            "type": "string"
+                          },
+                          {
+                            "const": "udp",
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "port": {
+                        "minimum": 1,
+                        "maximum": 65535,
+                        "type": "integer"
+                      },
+                      "allowedCidrs": {
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "type": "array",
+                        "items": {
+                          "minLength": 3,
+                          "maxLength": 64,
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "HeartbeatRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "generation",
+          "agentVersion",
+          "capabilities",
+          "observation"
+        ],
+        "properties": {
+          "generation": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "agentVersion": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "os",
+              "architecture",
+              "dockerVersion",
+              "composeVersion",
+              "tunAvailable",
+              "ntpSynchronized",
+              "clockOffsetSeconds"
+            ],
+            "properties": {
+              "os": {
+                "anyOf": [
+                  {
+                    "const": "ubuntu-22.04",
+                    "type": "string"
+                  },
+                  {
+                    "const": "ubuntu-24.04",
+                    "type": "string"
+                  },
+                  {
+                    "const": "debian-12",
+                    "type": "string"
+                  }
+                ]
+              },
+              "architecture": {
+                "anyOf": [
+                  {
+                    "const": "amd64",
+                    "type": "string"
+                  },
+                  {
+                    "const": "arm64",
+                    "type": "string"
+                  }
+                ]
+              },
+              "dockerVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "composeVersion": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tunAvailable": {
+                "type": "boolean"
+              },
+              "ntpSynchronized": {
+                "type": "boolean"
+              },
+              "clockOffsetSeconds": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "observation": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          }
+        }
+      },
+      "NebulaCertificateRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "environmentId",
+          "publicKey",
+          "requestedGroups"
+        ],
+        "properties": {
+          "environmentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "publicKey": {
+            "minLength": 32,
+            "maxLength": 8192,
+            "type": "string"
+          },
+          "requestedGroups": {
+            "uniqueItems": true,
+            "type": "array",
+            "items": {
+              "minLength": 1,
+              "maxLength": 255,
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NebulaCertificateResponse": {
+        "type": "object",
+        "required": [
+          "certificate",
+          "caCertificate",
+          "overlayAddress",
+          "expiresAt",
+          "blocklist"
+        ],
+        "properties": {
+          "certificate": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "caCertificate": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "overlayAddress": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "blocklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Operation": {
+        "$id": "Operation",
+        "type": "object",
+        "required": [
+          "id",
+          "environmentId",
+          "kind",
+          "state",
+          "revision",
+          "idempotencyKey",
+          "retryOfOperationId",
+          "planOperationId",
+          "result",
+          "createdAt",
+          "startedAt",
+          "finishedAt",
+          "steps"
+        ],
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "environmentId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "const": "plan",
+                "type": "string"
+              },
+              {
+                "const": "apply",
+                "type": "string"
+              },
+              {
+                "const": "reconcile",
+                "type": "string"
+              },
+              {
+                "const": "destroy",
+                "type": "string"
+              },
+              {
+                "const": "abandon",
+                "type": "string"
+              }
+            ]
+          },
+          "state": {
+            "anyOf": [
+              {
+                "const": "queued",
+                "type": "string"
+              },
+              {
+                "const": "running",
+                "type": "string"
+              },
+              {
+                "const": "waiting",
+                "type": "string"
+              },
+              {
+                "const": "succeeded",
+                "type": "string"
+              },
+              {
+                "const": "blocked",
+                "type": "string"
+              },
+              {
+                "const": "failed",
+                "type": "string"
+              },
+              {
+                "const": "needs_reconciliation",
+                "type": "string"
+              },
+              {
+                "const": "cancelling",
+                "type": "string"
+              },
+              {
+                "const": "cancelled",
+                "type": "string"
+              }
+            ]
+          },
+          "revision": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "idempotencyKey": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "retryOfOperationId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "planOperationId": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {}
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "key",
+                "title",
+                "position",
+                "state",
+                "attempt",
+                "startedAt",
+                "finishedAt",
+                "errorCode",
+                "errorMessage"
+              ],
+              "properties": {
+                "id": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "key": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "title": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "position": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "state": {
+                  "anyOf": [
+                    {
+                      "const": "pending",
+                      "type": "string"
+                    },
+                    {
+                      "const": "running",
+                      "type": "string"
+                    },
+                    {
+                      "const": "waiting",
+                      "type": "string"
+                    },
+                    {
+                      "const": "succeeded",
+                      "type": "string"
+                    },
+                    {
+                      "const": "failed",
+                      "type": "string"
+                    },
+                    {
+                      "const": "skipped",
+                      "type": "string"
+                    },
+                    {
+                      "const": "cancelled",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "attempt": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "finishedAt": {
+                  "anyOf": [
+                    {
+                      "format": "date-time",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "errorCode": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "errorMessage": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "OperationEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "operationId",
+          "level",
+          "code",
+          "message",
+          "stepKey",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "operationId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "const": "info",
+                "type": "string"
+              },
+              {
+                "const": "warning",
+                "type": "string"
+              },
+              {
+                "const": "error",
+                "type": "string"
+              }
+            ]
+          },
+          "code": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "stepKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        }
+      },
+      "Problem": {
+        "$id": "Problem",
+        "type": "object",
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "type": {
+            "format": "uri-reference",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "status": {
+            "minimum": 400,
+            "maximum": 599,
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "format": "uri-reference",
+            "type": "string"
+          },
+          "code": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "message"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TaskEventRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "leaseToken",
+          "sequence",
+          "level",
+          "message"
+        ],
+        "properties": {
+          "leaseToken": {
+            "minLength": 32,
+            "type": "string"
+          },
+          "sequence": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "const": "info",
+                "type": "string"
+              },
+              {
+                "const": "warning",
+                "type": "string"
+              },
+              {
+                "const": "error",
+                "type": "string"
+              }
+            ]
+          },
+          "message": {
+            "minLength": 1,
+            "maxLength": 8192,
+            "type": "string"
+          }
+        }
+      },
+      "WorkloadManifest": {
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schemaVersion",
+          "inputsSchema",
+          "secretFiles",
+          "endpoints",
+          "placement",
+          "probes"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": 1,
+            "type": "number"
+          },
+          "inputsSchema": {
+            "type": "object",
+            "patternProperties": {
+              "^(.*)$": {}
+            }
+          },
+          "secretFiles": {
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "input",
+                "target"
+              ],
+              "properties": {
+                "input": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "target": {
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "protocol",
+                "port",
+                "scope"
+              ],
+              "properties": {
+                "name": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "protocol": {
+                  "anyOf": [
+                    {
+                      "const": "tcp",
+                      "type": "string"
+                    },
+                    {
+                      "const": "udp",
+                      "type": "string"
+                    },
+                    {
+                      "const": "http",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "port": {
+                  "minimum": 1,
+                  "maximum": 65535,
+                  "type": "integer"
+                },
+                "scope": {
+                  "anyOf": [
+                    {
+                      "const": "public",
+                      "type": "string"
+                    },
+                    {
+                      "const": "overlay",
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "placement": {
+            "type": "object",
+            "required": [
+              "requiredRoles"
+            ],
+            "properties": {
+              "requiredRoles": {
+                "uniqueItems": true,
+                "type": "array",
+                "items": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "probes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "target",
+                "timeoutSeconds"
+              ],
+              "properties": {
+                "kind": {
+                  "anyOf": [
+                    {
+                      "const": "container",
+                      "type": "string"
+                    },
+                    {
+                      "const": "http",
+                      "type": "string"
+                    },
+                    {
+                      "const": "tcp",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "target": {
+                  "minLength": 1,
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                "timeoutSeconds": {
+                  "minimum": 1,
+                  "maximum": 60,
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "registryCredentials": {
+            "uniqueItems": true,
+            "maxItems": 16,
+            "type": "array",
+            "items": {
+              "additionalProperties": false,
+              "type": "object",
+              "required": [
+                "registry",
+                "credentialId"
+              ],
+              "properties": {
+                "registry": {
+                  "minLength": 1,
+                  "maxLength": 253,
+                  "type": "string"
+                },
+                "credentialId": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "WorkloadPackage": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "minLength": 1,
+            "maxLength": 255,
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        }
+      },
+      "WorkloadVersion": {
+        "type": "object",
+        "required": [
+          "id",
+          "workloadId",
+          "version",
+          "digest",
+          "composeYaml",
+          "manifest",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "workloadId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+            "type": "string"
+          },
+          "digest": {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          "composeYaml": {
+            "type": "string"
+          },
+          "manifest": {
+            "additionalProperties": false,
+            "type": "object",
+            "required": [
+              "schemaVersion",
+              "inputsSchema",
+              "secretFiles",
+              "endpoints",
+              "placement",
+              "probes"
+            ],
+            "properties": {
+              "schemaVersion": {
+                "const": 1,
+                "type": "number"
+              },
+              "inputsSchema": {
+                "type": "object",
+                "patternProperties": {
+                  "^(.*)$": {}
+                }
+              },
+              "secretFiles": {
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "input",
+                    "target"
+                  ],
+                  "properties": {
+                    "input": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "target": {
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "protocol",
+                    "port",
+                    "scope"
+                  ],
+                  "properties": {
+                    "name": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "protocol": {
+                      "anyOf": [
+                        {
+                          "const": "tcp",
+                          "type": "string"
+                        },
+                        {
+                          "const": "udp",
+                          "type": "string"
+                        },
+                        {
+                          "const": "http",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "port": {
+                      "minimum": 1,
+                      "maximum": 65535,
+                      "type": "integer"
+                    },
+                    "scope": {
+                      "anyOf": [
+                        {
+                          "const": "public",
+                          "type": "string"
+                        },
+                        {
+                          "const": "overlay",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "placement": {
+                "type": "object",
+                "required": [
+                  "requiredRoles"
+                ],
+                "properties": {
+                  "requiredRoles": {
+                    "uniqueItems": true,
+                    "type": "array",
+                    "items": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "probes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "target",
+                    "timeoutSeconds"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "anyOf": [
+                        {
+                          "const": "container",
+                          "type": "string"
+                        },
+                        {
+                          "const": "http",
+                          "type": "string"
+                        },
+                        {
+                          "const": "tcp",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "target": {
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "type": "string"
+                    },
+                    "timeoutSeconds": {
+                      "minimum": 1,
+                      "maximum": 60,
+                      "type": "integer"
+                    }
+                  }
+                }
+              },
+              "registryCredentials": {
+                "uniqueItems": true,
+                "maxItems": 16,
+                "type": "array",
+                "items": {
+                  "additionalProperties": false,
+                  "type": "object",
+                  "required": [
+                    "registry",
+                    "credentialId"
+                  ],
+                  "properties": {
+                    "registry": {
+                      "minLength": 1,
+                      "maxLength": 253,
+                      "type": "string"
+                    },
+                    "credentialId": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "deviceToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque"
+      }
+    }
+  }
+}

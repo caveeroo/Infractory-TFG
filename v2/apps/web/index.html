@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F6F7F8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E0F11" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Infractory — dependable engagement infrastructure." />
+    <title>Infractory</title>
+    <script>
+      (() => {
+        const value = localStorage.getItem("infractory-theme") || "system";
+        const dark = value === "dark" || (value === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

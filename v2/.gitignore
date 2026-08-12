@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.vite/
+.turbo/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+apps/agent/bin/
+apps/agent/coverage.out
+deploy/caddy/data/
+deploy/caddy/config/
+tmp/
