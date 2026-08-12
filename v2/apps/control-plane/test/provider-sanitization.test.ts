@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeProviderValue } from "../src/adapters/pulumi-infrastructure.js";
+import { instanceResourceOptions, planChangeFromEvent, sanitizeProviderValue } from "../src/adapters/pulumi-infrastructure.js";
+import type { EngineEvent } from "@pulumi/pulumi/automation/index.js";
 
 describe("provider observation sanitization", () => {
   it("redacts secret-shaped fields recursively while retaining diagnostics", () => {
@@ -27,5 +28,16 @@ describe("provider observation sanitization", () => {
       "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270",
       ciphertext: "opaque-but-sensitive"
     })).toBe("[REDACTED]");
+  });
+
+  it("retains bootstrap data for stable instances and refreshes it on replacement", () => {
+    expect(instanceResourceOptions(false)).toMatchObject({ ignoreChanges: ["userDataBase64"], replaceOnChanges: ["instanceType"] });
+    expect(instanceResourceOptions(true)).toMatchObject({ replaceOnChanges: ["instanceType", "userDataBase64"] });
+    expect(instanceResourceOptions(true)).not.toHaveProperty("ignoreChanges");
+  });
+
+  it("preserves per-instance replacement identity in reviewed plans", () => {
+    const event = { resourcePreEvent: { metadata: { op: "create-replacement", urn: "urn:pulumi:environment::project::aws:ec2/instance:Instance::node-relay", type: "aws:ec2/instance:Instance" } } } as EngineEvent;
+    expect(planChangeFromEvent(event)).toMatchObject({ action: "replace", resourceType: "aws:ec2/instance:Instance", resourceKey: "node-relay", destructive: true });
   });
 });

@@ -21,6 +21,7 @@ const STEPS: Record<OperationKind, StepDefinition[]> = {
     { key: "verify_plan", title: "Verify reviewed plan" },
     { key: "apply_infrastructure", title: "Converge AWS infrastructure" },
     { key: "await_nodes", title: "Wait for nodes" },
+    { key: "prepare_nodes", title: "Install node prerequisites" },
     { key: "configure_network", title: "Configure private network" },
     { key: "deploy_workloads", title: "Deploy workloads" },
     { key: "verify_health", title: "Verify environment health" }
@@ -176,7 +177,10 @@ export class OperationService {
       if (stepKey === "verify_plan") { await this.requireValidPlan(env, operation.planOperationId ?? ""); await this.store.patchEnvironment(env.id, { lifecycle: "applying", updatedAt: new Date().toISOString() }); return { kind: "done" }; }
       if (stepKey === "apply_infrastructure") {
         const agentBootstrap: Record<string, { enrollmentToken: string; publicUrl: string }> = {};
-        for (const node of await this.store.listNodes(env.id)) if (node.origin === "aws") {
+        const nodes = await this.store.listNodes(env.id);
+        const reviewedPlan = await this.store.getLatestSuccessfulPlan(env.id, operation.planOperationId ?? "");
+        if (!reviewedPlan?.plan) throw invalid("invalid_plan", "The apply operation lost its reviewed plan artifact");
+        for (const node of this.managedNodesRequiringBootstrap(nodes, reviewedPlan.plan)) {
           const enrollment = await this.mintEnrollment(node.id);
           agentBootstrap[node.nodeKey] = { enrollmentToken: enrollment.token, publicUrl: this.config.publicUrl };
         }
@@ -187,6 +191,10 @@ export class OperationService {
       if (stepKey === "await_nodes") {
         const nodes = await this.store.listNodes(env.id); const pending = nodes.filter((node) => node.lifecycle !== "active");
         return pending.length ? { kind: "wait", message: `Waiting for ${pending.length} node${pending.length === 1 ? "" : "s"} to enroll` } : { kind: "done" };
+      }
+      if (stepKey === "prepare_nodes") {
+        const nodes = await this.store.listNodes(env.id);
+        return this.ensureTasks(operation, "EnsurePrerequisites", nodes, () => ({ docker: true, nebula: true }));
       }
       if (stepKey === "configure_network") {
         if (this.config.infrastructureMode === "fake") return { kind: "done" };
@@ -212,7 +220,11 @@ export class OperationService {
         const reviewedPlan = await this.store.getLatestSuccessfulPlan(env.id, operation.planOperationId ?? "");
         if (!reviewedPlan?.plan) throw invalid("invalid_plan", "The apply operation lost its reviewed plan artifact");
         const nodes = await this.store.listNodes(env.id); const materialized = await this.workloads.materialize(spec, env.id, operation.revision, reviewedPlan.plan!.workloadResolutions);
-        return this.ensureTaskTargets(operation, "ApplyWorkload", materialized.map((item) => ({ node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
+        const stopped = materialized.filter((item) => item.desiredState === "stopped");
+        const stoppedResult = await this.ensureTaskTargets(operation, "RemoveWorkload", stopped.map((item) => ({ targetKey: item.deploymentKey, node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
+        if (stoppedResult.kind !== "done") return stoppedResult;
+        const running = materialized.filter((item) => item.desiredState === "running");
+        return this.ensureTaskTargets(operation, "ApplyWorkload", running.map((item) => ({ targetKey: item.deploymentKey, node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
       }
       const nodes = await this.store.listNodes(env.id);
       if (nodes.some((node) => node.health !== "online")) return { kind: "blocked", code: "nodes_unhealthy", message: "One or more nodes are not reporting healthy observations" };
@@ -246,12 +258,12 @@ export class OperationService {
   }
 
   private async ensureTasks(operation: OperationRecord, kind: AgentCommandRecord["kind"], nodes: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>, payload: (node: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>[number]) => Record<string, unknown>): Promise<StepOutcome> {
-    return this.ensureTaskTargets(operation, kind, nodes.map((node) => ({ node, payload: payload(node) })));
+    return this.ensureTaskTargets(operation, kind, nodes.map((node) => ({ targetKey: node.nodeKey, node, payload: payload(node) })));
   }
-  private async ensureTaskTargets(operation: OperationRecord, kind: AgentCommandRecord["kind"], targets: Array<{ node: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>[number]; payload: Record<string, unknown> }>): Promise<StepOutcome> {
+  private async ensureTaskTargets(operation: OperationRecord, kind: AgentCommandRecord["kind"], targets: Array<{ targetKey: string; node: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>[number]; payload: Record<string, unknown> }>): Promise<StepOutcome> {
     if (this.config.infrastructureMode === "fake") return { kind: "done" };
     const prefix = `${operation.id}:${kind}:`;
-    for (const { node, payload } of targets) await this.store.createAgentCommand({ nodeId: node.id, actionKey: `${prefix}${node.generation}`, nodeGeneration: node.generation, kind, payload, deadline: new Date(Date.now() + 30 * 60_000).toISOString() });
+    for (const { targetKey, node, payload } of targets) await this.store.createAgentCommand({ nodeId: node.id, actionKey: `${prefix}${targetKey}:${node.generation}`, nodeGeneration: node.generation, kind, payload, deadline: new Date(Date.now() + 30 * 60_000).toISOString() });
     await this.store.expireAgentCommands(targets.map(({ node }) => node.id), prefix, new Date().toISOString());
     const commands = await this.store.listAgentCommands(targets.map(({ node }) => node.id), prefix);
     const failed = commands.find(({ state }) => state === "failed" || state === "stale");
@@ -263,6 +275,20 @@ export class OperationService {
     const token = randomBytes(32).toString("base64url"); const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString();
     await this.store.createEnrollment({ id: randomUUID(), nodeId, tokenHash: digest(`${this.config.tokenPepper}:${token}`), expiresAt, consumedAt: null, createdAt: new Date().toISOString() });
     await this.store.patchNode(nodeId, { lifecycle: "enrolling" }); return { token, expiresAt };
+  }
+
+  private managedNodesRequiringBootstrap(
+    nodes: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>,
+    plan: PlanArtifact
+  ): Awaited<ReturnType<ControlPlaneStore["listNodes"]>> {
+    return nodes.filter((node) => {
+      if (node.origin !== "aws") return false;
+      return plan.changes.some((change) =>
+        (change.action === "create" || change.action === "replace") &&
+        (change.resourceKey === node.nodeKey || change.resourceKey === `node-${node.nodeKey}`) &&
+        (change.resourceType === "AWS node" || change.resourceType.includes("ec2/instance"))
+      );
+    });
   }
   async createEnrollment(environmentId: string, nodeId: string): Promise<{ token: string; expiresAt: string }> {
     const node = await this.store.getNode(nodeId); if (!node) throw notFound("Node");

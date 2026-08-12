@@ -67,7 +67,7 @@ export class PostgresStore implements ControlPlaneStore {
       await sql`update node_identities set revoked_at=now() where node_id in (select id from nodes where environment_id=${environment.id}::uuid and lifecycle in ('detached','removed')) and revoked_at is null`.execute(trx);
       for (const node of nodes) await sql`insert into nodes (id,environment_id,node_key,name,origin,generation,lifecycle,health,last_seen_at)
         values (${node.id}::uuid,${node.environmentId}::uuid,${node.nodeKey},${node.name},${node.origin},${node.generation},${node.lifecycle},${node.health},${node.lastSeenAt}::timestamptz)
-        on conflict (environment_id,node_key) do update set name=excluded.name,origin=excluded.origin,generation=excluded.generation`.execute(trx);
+        on conflict (environment_id,node_key) do update set name=excluded.name,origin=excluded.origin,generation=excluded.generation,lifecycle=excluded.lifecycle,health=excluded.health,last_seen_at=excluded.last_seen_at`.execute(trx);
     });
   }
   async patchEnvironment(id: string, patch: Partial<Pick<EnvironmentRecord, "lifecycle" | "health" | "appliedRevision" | "updatedAt">>): Promise<void> {

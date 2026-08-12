@@ -66,10 +66,11 @@ export class WorkloadService {
   async plan(spec: EnvironmentSpec): Promise<WorkloadPlan> {
     const blockers: string[] = []; const resolutions: Resolution[] = [];
     for (const deployment of spec.deployments) {
-      const version = await this.store.getWorkloadVersion(deployment.workloadVersionId);
-      if (!version) { blockers.push(`Workload version for '${deployment.key}' does not exist`); continue; }
       const node = spec.nodes.find(({ key }) => key === deployment.nodeKey);
       if (!node) { blockers.push(`Deployment '${deployment.key}' targets a missing node`); continue; }
+      if (deployment.desiredState === "stopped") continue;
+      const version = await this.store.getWorkloadVersion(deployment.workloadVersionId);
+      if (!version) { blockers.push(`Workload version for '${deployment.key}' does not exist`); continue; }
       for (const role of version.manifest.placement.requiredRoles) if (!node.roles.includes(role)) blockers.push(`Deployment '${deployment.key}' requires role '${role}' on node '${node.key}'`);
       for (const secret of version.manifest.secretFiles) {
         const binding = deployment.inputs[secret.input];
@@ -98,16 +99,22 @@ export class WorkloadService {
   }
   async planBlockers(spec: EnvironmentSpec): Promise<string[]> { return (await this.plan(spec)).blockers; }
 
-  async materialize(spec: EnvironmentSpec, environmentId: string, environmentRevision: number, resolutions: Resolution[]): Promise<Array<{ deploymentKey: string; nodeKey: string; payload: Record<string, unknown> }>> {
+  async materialize(spec: EnvironmentSpec, environmentId: string, environmentRevision: number, resolutions: Resolution[]): Promise<Array<{ deploymentKey: string; nodeKey: string; desiredState: "running" | "stopped"; payload: Record<string, unknown> }>> {
     const uuid = (key: string): string => {
       const hex = digest(`${environmentId}:${key}`).slice(0, 32).split(""); hex[12] = "5"; hex[16] = ((Number.parseInt(hex[16]!, 16) & 3) | 8).toString(16);
       return `${hex.slice(0, 8).join("")}-${hex.slice(8, 12).join("")}-${hex.slice(12, 16).join("")}-${hex.slice(16, 20).join("")}-${hex.slice(20).join("")}`;
     };
     return Promise.all(spec.deployments.map(async (deployment) => {
+      const deploymentId = uuid(deployment.key); const generation = environmentRevision;
+      if (deployment.desiredState === "stopped") return {
+        deploymentKey: deployment.key,
+        nodeKey: deployment.nodeKey,
+        desiredState: "stopped" as const,
+        payload: { deploymentId, removeOwnedVolumes: false }
+      };
       const version = await this.store.getWorkloadVersion(deployment.workloadVersionId); if (!version) throw invalid("workload_plan_stale", `Workload version for '${deployment.key}' no longer exists`);
       const resolution = resolutions.find(({ deploymentKey }) => deploymentKey === deployment.key);
       if (!resolution || resolution.workloadVersionId !== version.id || resolution.workloadVersionDigest !== version.digest) throw invalid("workload_plan_stale", `Reviewed image resolutions for '${deployment.key}' do not match its immutable workload version`);
-      const deploymentId = uuid(deployment.key); const generation = environmentRevision;
       const releaseRoot = `/var/lib/infractory/environments/${environmentId}/deployments/${deploymentId}/${generation}`;
       const secretBindings = version.manifest.secretFiles.map((secret) => {
         const binding = deployment.inputs[secret.input];
@@ -115,7 +122,7 @@ export class WorkloadService {
         return { target: `${releaseRoot}/secrets/${secret.target}`, credentialId: binding.credentialId };
       });
       return {
-        deploymentKey: deployment.key, nodeKey: deployment.nodeKey,
+        deploymentKey: deployment.key, nodeKey: deployment.nodeKey, desiredState: "running" as const,
         payload: {
           environmentId, deploymentId, generation, composeYaml: version.composeYaml, resolvedImages: resolution.resolvedImages,
           secretFiles: [], secretBindings, allowedPorts: deployment.exposures, probes: version.manifest.probes, timeoutSeconds: 600

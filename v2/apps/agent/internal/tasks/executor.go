@@ -675,6 +675,9 @@ func (e *Executor) removeWorkload(ctx context.Context, p protocol.RemoveWorkload
 		return nil, err
 	}
 	composePath, base, err := findDeployment(e.Root, p.DeploymentID)
+	if errors.Is(err, os.ErrNotExist) {
+		return map[string]any{"deploymentId": p.DeploymentID, "removed": true, "alreadyAbsent": true}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -835,6 +838,9 @@ func atomicSymlink(target, path string) error {
 	}
 	return os.Rename(tmp, path)
 }
+
+var errCorruptDeploymentState = errors.New("deployment state is corrupt")
+
 func findDeployment(root paths.Root, deploymentID string) (string, string, error) {
 	envs, _ := root.Path("environments")
 	entries, err := os.ReadDir(envs)
@@ -847,19 +853,30 @@ func findDeployment(root paths.Root, deploymentID string) (string, string, error
 			continue
 		}
 		base, _ := root.Path("environments", env.Name(), "deployments", deploymentID)
-		current := filepath.Join(base, "current")
-		target, err := os.Readlink(current)
-		if err == nil {
-			generation, parseErr := strconv.ParseInt(target, 10, 64)
-			if parseErr != nil || generation < 1 {
-				continue
-			}
-			resolved, resolveErr := root.Resolve("environments", env.Name(), "deployments", deploymentID, target, "compose.yml")
-			if resolveErr != nil {
-				continue
-			}
-			return resolved, base, nil
+		info, statErr := os.Stat(base)
+		if errors.Is(statErr, os.ErrNotExist) {
+			continue
 		}
+		if statErr != nil {
+			return "", "", statErr
+		}
+		if !info.IsDir() {
+			return "", base, fmt.Errorf("%w: deployment path is not a directory", errCorruptDeploymentState)
+		}
+		current := filepath.Join(base, "current")
+		target, readErr := os.Readlink(current)
+		if readErr != nil {
+			return "", base, fmt.Errorf("%w: read current release: %v", errCorruptDeploymentState, readErr)
+		}
+		generation, parseErr := strconv.ParseInt(target, 10, 64)
+		if parseErr != nil || generation < 1 {
+			return "", base, fmt.Errorf("%w: current release target %q is invalid", errCorruptDeploymentState, target)
+		}
+		resolved, resolveErr := root.Resolve("environments", env.Name(), "deployments", deploymentID, target, "compose.yml")
+		if resolveErr != nil {
+			return "", base, fmt.Errorf("%w: resolve current Compose file: %v", errCorruptDeploymentState, resolveErr)
+		}
+		return resolved, base, nil
 	}
 	return "", "", os.ErrNotExist
 }

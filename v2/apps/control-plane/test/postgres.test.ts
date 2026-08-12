@@ -37,4 +37,25 @@ describe.skipIf(!databaseUrl)("PostgreSQL persistence", () => {
     await store.heartbeatWorker(randomUUID(), new Date().toISOString(), 3);
     expect(await store.hasFreshWorker(30)).toBe(true);
   });
+  it("resets persisted lifecycle fields when a removed node key is re-added", async () => {
+    const environments = new EnvironmentService(store);
+    const initialSpec = {
+      schemaVersion: 1 as const, name: "Node re-add", region: "eu-west-1",
+      network: { cidr: "10.51.0.0/24", lighthouseNodeKeys: ["relay"] },
+      nodes: [
+        { key: "relay", name: "Relay", roles: ["lighthouse"], source: { kind: "adopted" as const } },
+        { key: "worker", name: "Worker", roles: ["worker"], source: { kind: "adopted" as const } }
+      ], deployments: []
+    };
+    const environment = await environments.create(initialSpec);
+    const worker = (await store.listNodes(environment.id)).find(({ nodeKey }) => nodeKey === "worker")!;
+    await store.patchNode(worker.id, { lifecycle: "active", health: "online", lastSeenAt: "2026-01-01T00:00:00.000Z" });
+
+    const withoutWorker = { ...initialSpec, nodes: [initialSpec.nodes[0]!] };
+    const removed = await environments.updateSpec(environment.id, environment.etag, withoutWorker);
+    expect(await store.getNode(worker.id)).toMatchObject({ lifecycle: "detached", health: "unknown" });
+
+    await environments.updateSpec(environment.id, removed.etag, initialSpec);
+    expect(await store.getNode(worker.id)).toMatchObject({ lifecycle: "pending", health: "unknown", lastSeenAt: null });
+  });
 });
