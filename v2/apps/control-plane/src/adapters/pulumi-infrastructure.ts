@@ -70,7 +70,7 @@ export class PulumiInfrastructureAdapter implements InfrastructureAdapter {
           if (node.source.kind !== "aws") continue;
           const ingress = [
             ...(spec.network.lighthouseNodeKeys.includes(node.key) ? [{ protocol: "udp", fromPort: 4242, toPort: 4242, cidrBlocks: ["0.0.0.0/0"], description: "Nebula lighthouse" }] : []),
-            ...spec.deployments.filter((item) => item.nodeKey === node.key).flatMap((item) => item.exposures.map((exposure) => ({ protocol: exposure.protocol, fromPort: exposure.port, toPort: exposure.port, cidrBlocks: exposure.allowedCidrs, description: `Workload ${item.key}` })))
+            ...spec.deployments.filter((item) => item.nodeKey === node.key && item.desiredState === "running").flatMap((item) => item.exposures.map((exposure) => ({ protocol: exposure.protocol, fromPort: exposure.port, toPort: exposure.port, cidrBlocks: exposure.allowedCidrs, description: `Workload ${item.key}` })))
           ];
           const securityGroup = new aws.ec2.SecurityGroup(`node-${node.key}`, { vpcId: vpc.id, ingress, egress: [{ protocol: "-1", fromPort: 0, toPort: 0, cidrBlocks: ["0.0.0.0/0"] }], tags: { ...commonTags, "infractory:node-key": node.key } });
           const token = bootstrap[node.key]?.enrollmentToken ?? "preview-token-is-never-applied";

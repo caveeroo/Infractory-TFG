@@ -109,7 +109,16 @@ describe("durable environment workflow", () => {
   });
 
   it("mints managed enrollment only for new or replacement instances", async () => {
-    class CapturingAdapter extends FakeInfrastructureAdapter { readonly inputs: ApplyInput[] = []; override async apply(input: ApplyInput): Promise<ApplyResult> { this.inputs.push(structuredClone(input)); return super.apply(input); } }
+    class CapturingAdapter extends FakeInfrastructureAdapter {
+      readonly inputs: ApplyInput[] = [];
+      override async preview(environmentId: string, environmentSpec: EnvironmentSpec) {
+        const applied = this.applied.get(environmentId)?.spec.nodes.find(({ key }) => key === "relay")?.source;
+        const desired = environmentSpec.nodes.find(({ key }) => key === "relay")?.source;
+        if (applied?.kind === "aws" && desired?.kind === "aws" && applied.instanceType !== desired.instanceType) return [{ action: "replace" as const, resourceType: "aws:ec2/instance:Instance", resourceKey: "node-relay", summary: "Replace Relay", destructive: true }];
+        return super.preview(environmentId, environmentSpec);
+      }
+      override async apply(input: ApplyInput): Promise<ApplyResult> { this.inputs.push(structuredClone(input)); return super.apply(input); }
+    }
     const adapter = new CapturingAdapter(); const { app, operations, store } = await setup(adapter);
     const managed = spec("Selective bootstrap"); managed.nodes = [{ key: "relay", name: "Relay", roles: ["lighthouse"], source: { kind: "aws", instanceType: "t3.small", architecture: "amd64", publicEndpoint: true } }];
     const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: managed } })).json();
@@ -130,6 +139,63 @@ describe("durable environment workflow", () => {
     const source = replacement.nodes[0]!.source; if (source.kind !== "aws") throw new Error("expected managed node"); source.instanceType = "t3.medium";
     await app.inject({ method: "PUT", url: `/api/v1/environments/${environment.id}/spec`, headers: { "if-match": `"${current.json().etag}"` }, payload: { spec: replacement } });
     await apply("replacement-0001"); expect(adapter.inputs[2]?.agentBootstrap).toHaveProperty("relay");
+  });
+
+  it("does not introduce an unreviewed replacement after an ambiguous initial apply", async () => {
+    class AmbiguousOnceAdapter extends FakeInfrastructureAdapter {
+      readonly inputs: ApplyInput[] = [];
+      override async apply(input: ApplyInput): Promise<ApplyResult> {
+        this.inputs.push(structuredClone(input));
+        const result = await super.apply(input);
+        if (this.inputs.length === 1) throw new Error("provider response was lost after mutation");
+        return result;
+      }
+    }
+    const adapter = new AmbiguousOnceAdapter(); const { app, operations, store } = await setup(adapter);
+    const managed = spec("Ambiguous bootstrap"); managed.nodes = [{ key: "relay", name: "Relay", roles: ["lighthouse"], source: { kind: "aws", instanceType: "t3.small", architecture: "amd64", publicEndpoint: true } }];
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: managed } })).json();
+
+    const firstPlan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": "plan-ambiguous-bootstrap-0001" } })).json();
+    for (let turn = 0; turn < 3; turn += 1) await operations.advance(firstPlan.id);
+    const firstApply = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-ambiguous-bootstrap-0001" }, payload: { planOperationId: firstPlan.id } })).json();
+    await operations.advance(firstApply.id); await operations.advance(firstApply.id);
+    expect((await store.getOperation(firstApply.id))?.state).toBe("needs_reconciliation");
+    expect(adapter.inputs[0]?.agentBootstrap).toHaveProperty("relay");
+
+    const recoveryPlan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": "plan-ambiguous-bootstrap-0002" } })).json();
+    for (let turn = 0; turn < 3; turn += 1) await operations.advance(recoveryPlan.id);
+    expect((await store.getOperation(recoveryPlan.id))?.plan?.changes).toMatchObject([{ action: "same" }]);
+    const recoveryApply = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-ambiguous-bootstrap-0002" }, payload: { planOperationId: recoveryPlan.id } })).json();
+    await operations.advance(recoveryApply.id); await operations.advance(recoveryApply.id);
+    expect(adapter.inputs[1]?.agentBootstrap).toEqual({});
+  });
+
+  it("dispatches stopped workload removals before waiting for running workload applies", async () => {
+    const liveLikeConfig: AppConfig = { ...config, infrastructureMode: "pulumi" };
+    const { app, operations, store } = await setup(new FakeInfrastructureAdapter(), liveLikeConfig);
+    const workload = (await app.inject({ method: "POST", url: "/api/v1/workloads", payload: { name: "mixed deployment" } })).json();
+    const image = `nginx@sha256:${"d".repeat(64)}`;
+    const version = (await app.inject({ method: "POST", url: `/api/v1/workloads/${workload.id}/versions`, payload: {
+      version: "1.0.0", composeYaml: `services:\n  web:\n    image: ${image}\n`,
+      manifest: { schemaVersion: 1, inputsSchema: {}, secretFiles: [], endpoints: [], placement: { requiredRoles: [] }, probes: [] }
+    } })).json();
+    const desired = spec("Mixed deployment"); desired.deployments = [
+      { key: "running", nodeKey: "relay", workloadVersionId: version.id, desiredState: "running", dependsOn: [], inputs: {}, exposures: [] },
+      { key: "stopped", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }
+    ];
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: desired } })).json();
+    const node = (await store.listNodes(environment.id))[0]!; await store.patchNode(node.id, { lifecycle: "active", health: "online" });
+    const plan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": "plan-mixed-workloads-0001" } })).json();
+    for (let turn = 0; turn < 3; turn += 1) await operations.advance(plan.id);
+    const apply = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-mixed-workloads-0001" }, payload: { planOperationId: plan.id } })).json();
+    const operation = await store.getOperation(apply.id);
+    for (const step of operation!.steps.filter(({ key }) => key !== "deploy_workloads" && key !== "verify_health")) await store.patchStep(operation!.id, step.id, { state: "succeeded", finishedAt: new Date().toISOString() });
+
+    await operations.advance(apply.id);
+    expect([...store.commands.values()].map(({ kind }) => kind)).toEqual(["RemoveWorkload"]);
+    const removal = [...store.commands.values()][0]!; removal.state = "succeeded";
+    await operations.advance(apply.id);
+    expect([...store.commands.values()].map(({ kind }) => kind)).toEqual(["RemoveWorkload", "ApplyWorkload"]);
   });
 
   it("rejects a stale reviewed plan", async () => {
@@ -297,17 +363,12 @@ describe("workload admission", () => {
   });
 
   it("materializes stopped workloads as idempotent removal tasks", async () => {
-    const { app, store } = await setup();
-    const workload = (await app.inject({ method: "POST", url: "/api/v1/workloads", payload: { name: "paused relay" } })).json();
-    const image = `nginx@sha256:${"c".repeat(64)}`;
-    const version = (await app.inject({ method: "POST", url: `/api/v1/workloads/${workload.id}/versions`, payload: {
-      version: "1.0.0", composeYaml: `services:\n  relay:\n    image: ${image}\n`,
-      manifest: { schemaVersion: 1, inputsSchema: {}, secretFiles: [], endpoints: [], placement: { requiredRoles: [] }, probes: [] }
-    } })).json();
+    const { store } = await setup();
     const credentials = new (await import("../src/services/credential-service.js")).CredentialService(store, config.encryptionKey);
     const service = new (await import("../src/services/workload-service.js")).WorkloadService(store, credentials);
-    const environmentSpec = spec(); environmentSpec.deployments = [{ key: "paused", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }];
+    const environmentSpec = spec(); environmentSpec.deployments = [{ key: "paused", nodeKey: "relay", workloadVersionId: "33333333-3333-4333-8333-333333333333", desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }];
     const plan = await service.plan(environmentSpec); const materialized = await service.materialize(environmentSpec, "11111111-1111-4111-8111-111111111111", 2, plan.resolutions);
+    expect(plan).toEqual({ blockers: [], resolutions: [] });
     expect(materialized[0]).toMatchObject({ desiredState: "stopped", payload: { removeOwnedVolumes: false } });
     expect(materialized[0]?.payload).not.toHaveProperty("composeYaml");
   });

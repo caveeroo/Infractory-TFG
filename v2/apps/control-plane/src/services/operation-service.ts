@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { EnvironmentSpec, Operation, OperationKind, PlanArtifact } from "@infractory/contracts";
+import type { Operation, OperationKind, PlanArtifact } from "@infractory/contracts";
 import type { ControlPlaneStore } from "../db/store.js";
 import { conflict, invalid, notFound } from "../domain/errors.js";
 import type { AgentCommandRecord, EnvironmentRecord, OperationRecord, StepDefinition } from "../domain/models.js";
@@ -180,7 +180,7 @@ export class OperationService {
         const nodes = await this.store.listNodes(env.id);
         const reviewedPlan = await this.store.getLatestSuccessfulPlan(env.id, operation.planOperationId ?? "");
         if (!reviewedPlan?.plan) throw invalid("invalid_plan", "The apply operation lost its reviewed plan artifact");
-        for (const node of await this.managedNodesRequiringBootstrap(env, spec, nodes, reviewedPlan.plan)) {
+        for (const node of this.managedNodesRequiringBootstrap(nodes, reviewedPlan.plan)) {
           const enrollment = await this.mintEnrollment(node.id);
           agentBootstrap[node.nodeKey] = { enrollmentToken: enrollment.token, publicUrl: this.config.publicUrl };
         }
@@ -220,11 +220,11 @@ export class OperationService {
         const reviewedPlan = await this.store.getLatestSuccessfulPlan(env.id, operation.planOperationId ?? "");
         if (!reviewedPlan?.plan) throw invalid("invalid_plan", "The apply operation lost its reviewed plan artifact");
         const nodes = await this.store.listNodes(env.id); const materialized = await this.workloads.materialize(spec, env.id, operation.revision, reviewedPlan.plan!.workloadResolutions);
-        const running = materialized.filter((item) => item.desiredState === "running");
-        const runningResult = await this.ensureTaskTargets(operation, "ApplyWorkload", running.map((item) => ({ node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
-        if (runningResult.kind !== "done") return runningResult;
         const stopped = materialized.filter((item) => item.desiredState === "stopped");
-        return this.ensureTaskTargets(operation, "RemoveWorkload", stopped.map((item) => ({ node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
+        const stoppedResult = await this.ensureTaskTargets(operation, "RemoveWorkload", stopped.map((item) => ({ node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
+        if (stoppedResult.kind !== "done") return stoppedResult;
+        const running = materialized.filter((item) => item.desiredState === "running");
+        return this.ensureTaskTargets(operation, "ApplyWorkload", running.map((item) => ({ node: nodes.find(({ nodeKey }) => nodeKey === item.nodeKey)!, payload: item.payload })));
       }
       const nodes = await this.store.listNodes(env.id);
       if (nodes.some((node) => node.health !== "online")) return { kind: "blocked", code: "nodes_unhealthy", message: "One or more nodes are not reporting healthy observations" };
@@ -277,24 +277,16 @@ export class OperationService {
     await this.store.patchNode(nodeId, { lifecycle: "enrolling" }); return { token, expiresAt };
   }
 
-  private async managedNodesRequiringBootstrap(
-    environment: EnvironmentRecord,
-    spec: EnvironmentSpec,
+  private managedNodesRequiringBootstrap(
     nodes: Awaited<ReturnType<ControlPlaneStore["listNodes"]>>,
     plan: PlanArtifact
-  ): Promise<Awaited<ReturnType<ControlPlaneStore["listNodes"]>>> {
-    const appliedRevision = environment.appliedRevision === null ? null : await this.store.getRevision(environment.id, environment.appliedRevision);
+  ): Awaited<ReturnType<ControlPlaneStore["listNodes"]>> {
     return nodes.filter((node) => {
       if (node.origin !== "aws") return false;
-      if (node.lifecycle !== "active" || !appliedRevision) return true;
-      const desired = spec.nodes.find(({ key }) => key === node.nodeKey);
-      const applied = appliedRevision.spec.nodes.find(({ key }) => key === node.nodeKey);
-      if (!desired || desired.source.kind !== "aws" || !applied || applied.source.kind !== "aws") return true;
-      if (desired.source.instanceType !== applied.source.instanceType || desired.source.architecture !== applied.source.architecture) return true;
       return plan.changes.some((change) =>
         (change.action === "create" || change.action === "replace") &&
-        change.resourceKey === `node-${node.nodeKey}` &&
-        change.resourceType.includes("ec2/instance")
+        (change.resourceKey === node.nodeKey || change.resourceKey === `node-${node.nodeKey}`) &&
+        (change.resourceType === "AWS node" || change.resourceType.includes("ec2/instance"))
       );
     });
   }

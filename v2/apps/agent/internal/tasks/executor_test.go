@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,6 +100,30 @@ func TestRemoveWorkloadIsIdempotentWhenAlreadyAbsent(t *testing.T) {
 	}
 	if len(commands.calls) != 0 {
 		t.Fatalf("Compose should not run for an absent workload: %#v", commands.calls)
+	}
+}
+
+func TestRemoveWorkloadRejectsCorruptDeploymentState(t *testing.T) {
+	rootPath := t.TempDir()
+	root, _ := paths.New(rootPath)
+	commands := &recordingRunner{}
+	executor := &Executor{Root: root, Runner: commands, ComposeBinary: "/var/lib/infractory/bin/docker-compose"}
+	environmentID := "22222222-2222-4222-8222-222222222222"
+	deploymentID := "11111111-1111-4111-8111-111111111111"
+	deploymentPath := filepath.Join(rootPath, "environments", environmentID, "deployments", deploymentID)
+	if err := os.MkdirAll(deploymentPath, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := executor.removeWorkload(context.Background(), protocol.RemoveWorkloadPayload{DeploymentID: deploymentID})
+	if err == nil || !errors.Is(err, errCorruptDeploymentState) {
+		t.Fatalf("expected corrupt deployment state, got result=%#v err=%v", result, err)
+	}
+	if len(commands.calls) != 0 {
+		t.Fatalf("Compose should not run without a valid release pointer: %#v", commands.calls)
+	}
+	if _, err := os.Stat(deploymentPath); err != nil {
+		t.Fatalf("corrupt state must be preserved for diagnosis: %v", err)
 	}
 }
 
