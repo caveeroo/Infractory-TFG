@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+let input = "";
+for await (const chunk of process.stdin) input += chunk;
+const request = JSON.parse(input);
+if (request.kind === "createCa") process.stdout.write(JSON.stringify({ caCertificate: "FAKE CA CERTIFICATE", caPrivateKey: "FAKE PRIVATE KEY", fingerprint: "ca-fingerprint" }));
+else if (request.kind === "sign") process.stdout.write(JSON.stringify({ certificate: "FAKE HOST CERTIFICATE", fingerprint: "host-fingerprint" }));
+else process.exitCode = 2;

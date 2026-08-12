@@ -1,0 +1,95 @@
+name: infractory-v2
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?run ./scripts/init-secrets.sh or set POSTGRES_ADMIN_PASSWORD}
+      INFRACTORY_DB_PASSWORD: ${INFRACTORY_DB_PASSWORD:?run ./scripts/init-secrets.sh or set INFRACTORY_DB_PASSWORD}
+      PULUMI_DB_PASSWORD: ${PULUMI_DB_PASSWORD:?run ./scripts/init-secrets.sh or set PULUMI_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sh:/docker-entrypoint-initdb.d/10-infractory.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.control-plane
+    command: ["node", "apps/control-plane/dist/db/migrate.js"]
+    environment: &control-plane-environment
+      DATABASE_URL: postgres://infractory:${INFRACTORY_DB_PASSWORD:?set INFRACTORY_DB_PASSWORD}@postgres:5432/infractory
+      PULUMI_BACKEND_URL: postgres://pulumi:${PULUMI_DB_PASSWORD:?set PULUMI_DB_PASSWORD}@postgres:5432/infractory_pulumi
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY}
+      PULUMI_CONFIG_PASSPHRASE: ${PULUMI_CONFIG_PASSPHRASE:?set PULUMI_CONFIG_PASSPHRASE}
+      INFRACTORY_PUBLIC_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      INFRACTORY_INFRASTRUCTURE_MODE: ${INFRASTRUCTURE_DRIVER:-fake}
+      INFRACTORY_EXECUTION_MODE: graphile
+      INFRACTORY_TOKEN_PEPPER: ${INFRACTORY_TOKEN_PEPPER:?set INFRACTORY_TOKEN_PEPPER}
+      AWS_REGION: ${AWS_REGION:-eu-west-1}
+      AWS_ALLOWED_REGIONS: ${AWS_ALLOWED_REGIONS:-eu-west-1}
+      HOST: 0.0.0.0
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-4}
+      PULUMI_CONCURRENCY: ${PULUMI_CONCURRENCY:-2}
+      INFRACTORY_AGENT_ARTIFACT_DIRECTORY: /opt/infractory/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.control-plane
+    command: ["node", "apps/control-plane/dist/index.js"]
+    environment: *control-plane-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  worker:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.control-plane
+    command: ["node", "apps/control-plane/dist/worker.js"]
+    environment: *control-plane-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    environment:
+      PUBLIC_ADDRESS: ${PUBLIC_ADDRESS:-http://:8080}
+    ports:
+      - ${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_PORT:-8080}:8080
+      - ${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_HTTP_PORT:-80}:80
+      - ${PUBLIC_BIND_ADDRESS:-127.0.0.1}:${PUBLIC_HTTPS_PORT:-443}:443
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

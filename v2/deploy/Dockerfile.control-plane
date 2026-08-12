@@ -1,0 +1,61 @@
+FROM golang:1.25-bookworm AS agent-build
+
+ARG AGENT_VERSION=0.1.0
+WORKDIR /src/apps/agent
+COPY apps/agent/go.mod apps/agent/go.sum ./
+RUN go mod download
+COPY apps/agent ./
+RUN mkdir -p /artifacts \
+  && for architecture in amd64 arm64; do \
+       CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" go build -trimpath -ldflags="-s -w -X main.version=$AGENT_VERSION" -o "/artifacts/infractory-agent-linux-$architecture" ./cmd/infractory-agent; \
+       CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" go build -trimpath -ldflags='-s -w' -o "/artifacts/infractory-pki-linux-$architecture" ./cmd/infractory-pki; \
+     done \
+  && cd /artifacts \
+  && sha256sum infractory-* > SHA256SUMS
+
+FROM node:24-bookworm-slim AS application-build
+
+RUN corepack enable
+WORKDIR /workspace
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY packages/contracts/package.json packages/contracts/package.json
+COPY apps/control-plane/package.json apps/control-plane/package.json
+RUN pnpm install --filter @infractory/control-plane... --frozen-lockfile
+COPY packages/contracts packages/contracts
+COPY apps/control-plane apps/control-plane
+RUN pnpm --filter @infractory/contracts build \
+  && pnpm --filter @infractory/control-plane build
+
+FROM node:24-bookworm-slim AS runtime
+
+ARG TARGETARCH
+ARG PULUMI_VERSION=3.181.0
+ARG PULUMI_AWS_VERSION=7.0.0
+
+ENV NODE_ENV=production \
+    PULUMI_HOME=/opt/pulumi \
+    PULUMI_SKIP_UPDATE_CHECK=true \
+    PATH=/opt/pulumi/bin:$PATH
+
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends ca-certificates curl tini \
+  && rm -rf /var/lib/apt/lists/* \
+  && case "$TARGETARCH" in amd64) pulumi_arch=x64 ;; arm64) pulumi_arch=arm64 ;; *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; esac \
+  && curl --fail --show-error --silent --location \
+       "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-${pulumi_arch}.tar.gz" \
+       --output /tmp/pulumi.tar.gz \
+  && mkdir -p /opt/pulumi/bin \
+  && tar --extract --gzip --file /tmp/pulumi.tar.gz --strip-components=1 --directory /opt/pulumi/bin \
+  && rm /tmp/pulumi.tar.gz \
+  && /opt/pulumi/bin/pulumi plugin install resource aws "$PULUMI_AWS_VERSION" \
+  && chown -R node:node /opt/pulumi
+
+WORKDIR /workspace
+COPY --from=application-build --chown=node:node /workspace /workspace
+COPY --from=agent-build --chown=node:node /artifacts /opt/infractory/artifacts
+COPY --chmod=755 deploy/control-plane-entrypoint.sh /usr/local/bin/control-plane-entrypoint
+
+USER node
+EXPOSE 3000
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/control-plane-entrypoint"]
+CMD ["node", "apps/control-plane/dist/index.js"]

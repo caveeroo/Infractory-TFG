@@ -1,0 +1,40 @@
+{
+  "id": "segmented",
+  "version": 1,
+  "name": "Segmented",
+  "description": "A public edge node separated from an overlay-only service node.",
+  "spec": {
+    "schemaVersion": 1,
+    "name": "Untitled segmented environment",
+    "region": "eu-west-1",
+    "network": {
+      "cidr": "10.81.0.0/24",
+      "lighthouseNodeKeys": ["edge"]
+    },
+    "nodes": [
+      {
+        "key": "edge",
+        "name": "Public edge",
+        "roles": ["lighthouse", "redirector", "public-edge"],
+        "source": {
+          "kind": "aws",
+          "instanceType": "t3.small",
+          "architecture": "amd64",
+          "publicEndpoint": true
+        }
+      },
+      {
+        "key": "service",
+        "name": "Private service",
+        "roles": ["teamserver", "service"],
+        "source": {
+          "kind": "aws",
+          "instanceType": "t3.small",
+          "architecture": "amd64",
+          "publicEndpoint": false
+        }
+      }
+    ],
+    "deployments": []
+  }
+}
