@@ -85,6 +85,23 @@ func TestApplyWorkloadUsesOnlyArgvAndConfinedFiles(t *testing.T) {
 	}
 }
 
+func TestRemoveWorkloadIsIdempotentWhenAlreadyAbsent(t *testing.T) {
+	root, _ := paths.New(t.TempDir())
+	commands := &recordingRunner{}
+	executor := &Executor{Root: root, Runner: commands, ComposeBinary: "/var/lib/infractory/bin/docker-compose"}
+	id := "11111111-1111-4111-8111-111111111111"
+	result, err := executor.removeWorkload(context.Background(), protocol.RemoveWorkloadPayload{DeploymentID: id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result["removed"] != true || result["alreadyAbsent"] != true {
+		t.Fatalf("unexpected idempotent removal result: %#v", result)
+	}
+	if len(commands.calls) != 0 {
+		t.Fatalf("Compose should not run for an absent workload: %#v", commands.calls)
+	}
+}
+
 func TestEnsureNebulaAcceptsInitialGenerationZero(t *testing.T) {
 	root, _ := paths.New(t.TempDir())
 	commands := &recordingRunner{}

@@ -8,10 +8,19 @@ import { digest, normalizeSpec, validateSpec } from "../domain/spec.js";
 export class EnvironmentService {
   constructor(private readonly store: ControlPlaneStore) {}
 
-  private nodes(environmentId: string, spec: EnvironmentSpec, existing: NodeRecord[] = []): NodeRecord[] {
+  private nodes(environmentId: string, spec: EnvironmentSpec, existing: NodeRecord[] = [], previousSpec?: EnvironmentSpec): NodeRecord[] {
+    const networkChanged = previousSpec !== undefined && digest(previousSpec.network) !== digest(spec.network);
     return spec.nodes.map((node) => {
       const current = existing.find((item) => item.nodeKey === node.key);
-      return current ? { ...current, name: node.name, origin: node.source.kind } : {
+      const previousNode = previousSpec?.nodes.find((item) => item.key === node.key);
+      const desiredConfigurationChanged = current !== undefined && (previousNode === undefined || networkChanged || digest(previousNode) !== digest(node));
+      return current ? {
+        ...current,
+        name: node.name,
+        origin: node.source.kind,
+        generation: current.generation + (desiredConfigurationChanged ? 1 : 0),
+        ...(previousNode === undefined ? { lifecycle: "pending" as const, health: "unknown" as const, lastSeenAt: null } : {})
+      } : {
         id: randomUUID(), environmentId, nodeKey: node.key, name: node.name, origin: node.source.kind,
         generation: 0, lifecycle: "pending", health: "unknown", lastSeenAt: null
       };
@@ -64,7 +73,7 @@ export class EnvironmentService {
     const now = new Date().toISOString(); const revisionNumber = current.desiredRevision + 1;
     const record: EnvironmentRecord = { ...current, name: spec.name, health: current.appliedRevision === null ? current.health : "degraded", desiredRevision: revisionNumber, expiresAt: spec.expiresAt ?? null, updatedAt: now, etag: revisionDigest };
     const revision: RevisionRecord = { id: randomUUID(), environmentId: id, revision: revisionNumber, digest: revisionDigest, spec, createdAt: now };
-    await this.store.updateEnvironment(record, revision, this.nodes(id, spec, currentNodes));
+    await this.store.updateEnvironment(record, revision, this.nodes(id, spec, currentNodes, current.spec));
     return { ...record, spec };
   }
   async listNodes(id: string): Promise<NodeRecord[]> {

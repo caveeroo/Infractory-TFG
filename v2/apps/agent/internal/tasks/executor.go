@@ -675,6 +675,9 @@ func (e *Executor) removeWorkload(ctx context.Context, p protocol.RemoveWorkload
 		return nil, err
 	}
 	composePath, base, err := findDeployment(e.Root, p.DeploymentID)
+	if errors.Is(err, os.ErrNotExist) {
+		return map[string]any{"deploymentId": p.DeploymentID, "removed": true, "alreadyAbsent": true}, nil
+	}
 	if err != nil {
 		return nil, err
 	}

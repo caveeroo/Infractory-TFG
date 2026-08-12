@@ -1,4 +1,4 @@
-import { LocalWorkspace, type InlineProgramArgs, type Stack } from "@pulumi/pulumi/automation/index.js";
+import { LocalWorkspace, type EngineEvent, type InlineProgramArgs, type Stack } from "@pulumi/pulumi/automation/index.js";
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
@@ -25,6 +25,26 @@ export function sanitizeProviderValue(value: unknown, key = ""): unknown {
     return Object.fromEntries(Object.entries(record).map(([childKey, item]) => [childKey, sanitizeProviderValue(item, childKey)]));
   }
   return value;
+}
+
+export function instanceResourceOptions(hasFreshEnrollment: boolean): pulumi.CustomResourceOptions {
+  return hasFreshEnrollment
+    ? { replaceOnChanges: ["instanceType", "userDataBase64"] }
+    : { ignoreChanges: ["userDataBase64"], replaceOnChanges: ["instanceType"] };
+}
+
+export function planChangeFromEvent(event: EngineEvent): PlanChange | null {
+  const metadata = event.resourcePreEvent?.metadata;
+  if (!metadata || metadata.type === "pulumi:pulumi:Stack") return null;
+  const action: PlanChange["action"] | null = metadata.op === "same" ? "same"
+    : metadata.op === "create" || metadata.op === "import" ? "create"
+      : metadata.op === "update" ? "update"
+        : metadata.op === "delete" || metadata.op === "discard" || metadata.op === "discard-replaced" || metadata.op === "remove-pending-replace" ? "delete"
+          : metadata.op === "replace" || metadata.op === "create-replacement" || metadata.op === "delete-replaced" || metadata.op === "read-replacement" || metadata.op === "import-replacement" ? "replace"
+            : null;
+  if (!action) return null;
+  const resourceKey = metadata.urn.split("::").at(-1) ?? metadata.urn;
+  return { action, resourceType: metadata.type, resourceKey, summary: `${action} ${metadata.type} '${resourceKey}'`, destructive: action === "delete" || action === "replace" };
 }
 
 export class PulumiInfrastructureAdapter implements InfrastructureAdapter {
@@ -60,7 +80,7 @@ export class PulumiInfrastructureAdapter implements InfrastructureAdapter {
           const configB64 = Buffer.from(JSON.stringify({ controlPlaneUrl: url, stateDir: "/var/lib/infractory", enrollmentTokenFile: "/var/lib/infractory/bootstrap/enrollment-token" })).toString("base64");
           const unitB64 = Buffer.from("[Unit]\nDescription=Infractory node agent\nAfter=network-online.target\nWants=network-online.target\n[Service]\nType=simple\nExecStart=/var/lib/infractory/bin/infractory-agent run --config /etc/infractory-agent/config.json\nRestart=always\nRestartSec=5s\nUser=root\nGroup=root\nUMask=0077\nNoNewPrivileges=true\nPrivateTmp=true\nProtectHome=true\n[Install]\nWantedBy=multi-user.target\n").toString("base64");
           const userData = Buffer.from(`#!/bin/sh\nset -eu\ninstall -d -m 0700 /var/lib/infractory/bootstrap\ninstall -d -m 0755 /var/lib/infractory/bin /etc/infractory-agent\numask 077\nprintf '%s' '${tokenB64}' | base64 -d > /var/lib/infractory/bootstrap/enrollment-token\nprintf '%s' '${configB64}' | base64 -d > /etc/infractory-agent/config.json\nprintf '%s' '${artifactUrlB64}' | base64 -d > /var/lib/infractory/bootstrap/artifact-url\ncurl --proto '=https' --tlsv1.2 --fail --silent --show-error --location "$(cat /var/lib/infractory/bootstrap/artifact-url)" -o /tmp/infractory-agent\necho '${this.agentAmd64Sha256}  /tmp/infractory-agent' | sha256sum -c -\ninstall -o root -g root -m 0755 /tmp/infractory-agent /var/lib/infractory/bin/infractory-agent\nprintf '%s' '${unitB64}' | base64 -d > /etc/systemd/system/infractory-agent.service\nrm -f /tmp/infractory-agent\nsystemctl daemon-reload\nsystemctl enable --now infractory-agent\n`).toString("base64");
-          const instance = new aws.ec2.Instance(`node-${node.key}`, { ami: ami.value, instanceType: node.source.instanceType, subnetId: subnet.id, vpcSecurityGroupIds: [securityGroup.id], userDataBase64: pulumi.secret(userData), metadataOptions: { httpTokens: "required", httpEndpoint: "enabled", httpPutResponseHopLimit: 1 }, rootBlockDevice: { volumeType: "gp3", volumeSize: 20, encrypted: true, deleteOnTermination: true }, tags: { ...commonTags, "infractory:node-key": node.key, Name: node.name } }, { ignoreChanges: ["userDataBase64"] });
+          const instance = new aws.ec2.Instance(`node-${node.key}`, { ami: ami.value, instanceType: node.source.instanceType, subnetId: subnet.id, vpcSecurityGroupIds: [securityGroup.id], userDataBase64: pulumi.secret(userData), metadataOptions: { httpTokens: "required", httpEndpoint: "enabled", httpPutResponseHopLimit: 1 }, rootBlockDevice: { volumeType: "gp3", volumeSize: 20, encrypted: true, deleteOnTermination: true }, tags: { ...commonTags, "infractory:node-key": node.key, Name: node.name } }, instanceResourceOptions(Boolean(bootstrap[node.key])));
           instances[node.key] = instance.id;
           if (spec.network.lighthouseNodeKeys.includes(node.key) || node.source.publicEndpoint) publicEndpoints[node.key] = new aws.ec2.Eip(`node-${node.key}`, { instance: instance.id, domain: "vpc", tags: { ...commonTags, "infractory:node-key": node.key } }).publicIp;
         }
@@ -83,7 +103,16 @@ export class PulumiInfrastructureAdapter implements InfrastructureAdapter {
     finally { sts.destroy(); }
   }
   async preview(environmentId: string, spec: EnvironmentSpec): Promise<PlanChange[]> {
-    const result = await (await this.stack(environmentId, spec)).preview({ refresh: true });
+    const observed = new Map<string, PlanChange>();
+    const result = await (await this.stack(environmentId, spec)).preview({
+      refresh: true,
+      onEvent: (event) => {
+        const change = planChangeFromEvent(event); if (!change) return;
+        const key = `${change.resourceType}:${change.resourceKey}`; const previous = observed.get(key);
+        if (!previous || change.action === "replace" || (change.action === "delete" && previous.action !== "replace")) observed.set(key, change);
+      }
+    });
+    if (observed.size > 0) return [...observed.values()];
     return Object.entries(result.changeSummary).map(([action, count]) => ({ action: action === "create" || action === "update" || action === "replace" || action === "delete" || action === "same" ? action : "update", resourceType: "AWS resources", resourceKey: action, summary: `${count} ${action}`, destructive: action === "delete" || action === "replace" }));
   }
   async apply(input: ApplyInput): Promise<ApplyResult> {

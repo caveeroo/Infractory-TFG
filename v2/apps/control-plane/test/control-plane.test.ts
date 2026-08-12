@@ -24,9 +24,9 @@ class TestScheduler implements OperationScheduler {
   async close(): Promise<void> {}
 }
 const opened: ControlPlaneApp[] = [];
-async function setup(infrastructure: InfrastructureAdapter = new FakeInfrastructureAdapter()) {
+async function setup(infrastructure: InfrastructureAdapter = new FakeInfrastructureAdapter(), appConfig: AppConfig = config) {
   const store = new MemoryStore(); const scheduler = new TestScheduler();
-  const result = await buildApp({ config, store, scheduler, infrastructure }); opened.push(result);
+  const result = await buildApp({ config: appConfig, store, scheduler, infrastructure }); opened.push(result);
   return { ...result, store, scheduler };
 }
 afterEach(async () => { await Promise.all(opened.splice(0).map(({ app }) => app.close())); });
@@ -53,7 +53,7 @@ describe("durable environment workflow", () => {
     const plan = await store.getOperation(planResponse.json().id); expect(plan?.state).toBe("succeeded"); expect(plan?.plan?.changes[0]?.action).toBe("create");
     const applyResponse = await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-once-0001" }, payload: { planOperationId: plan!.id } });
     expect(applyResponse.statusCode).toBe(202);
-    for (let i = 0; i < 6; i += 1) await operations.advance(applyResponse.json().id);
+    for (let i = 0; i < 7; i += 1) await operations.advance(applyResponse.json().id);
     expect((await store.getOperation(applyResponse.json().id))?.state).toBe("succeeded");
     expect((await store.getEnvironment(environment.id))?.lifecycle).toBe("active");
   });
@@ -66,9 +66,70 @@ describe("durable environment workflow", () => {
     const plan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": "plan-managed-0001" } })).json();
     for (let turn = 0; turn < 3; turn += 1) await operations.advance(plan.id);
     const apply = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-managed-0001" }, payload: { planOperationId: plan.id } })).json();
-    for (let turn = 0; turn < 6; turn += 1) await operations.advance(apply.id);
+    for (let turn = 0; turn < 7; turn += 1) await operations.advance(apply.id);
     expect((await store.getOperation(apply.id))?.state).toBe("succeeded");
     expect((await store.getEnvironment(environment.id))?.lifecycle).toBe("active");
+  });
+
+  it("advances node generations only when node or network intent changes", async () => {
+    const { app, store } = await setup();
+    const created = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: spec() } })).json();
+    expect((await store.listNodes(created.id))[0]?.generation).toBe(0);
+
+    const renamedEnvironment = spec("Renamed environment");
+    const renamed = await app.inject({ method: "PUT", url: `/api/v1/environments/${created.id}/spec`, headers: { "if-match": `"${created.etag}"` }, payload: { spec: renamedEnvironment } });
+    expect((await store.listNodes(created.id))[0]?.generation).toBe(0);
+
+    const changedRole = spec("Renamed environment"); changedRole.nodes[0]!.roles = ["lighthouse"];
+    const roleUpdate = await app.inject({ method: "PUT", url: `/api/v1/environments/${created.id}/spec`, headers: { "if-match": `"${renamed.json().etag}"` }, payload: { spec: changedRole } });
+    expect((await store.listNodes(created.id))[0]?.generation).toBe(1);
+
+    const changedNetwork = structuredClone(changedRole); changedNetwork.network.cidr = "10.81.0.0/24";
+    await app.inject({ method: "PUT", url: `/api/v1/environments/${created.id}/spec`, headers: { "if-match": `"${roleUpdate.json().etag}"` }, payload: { spec: changedNetwork } });
+    expect((await store.listNodes(created.id))[0]?.generation).toBe(2);
+  });
+
+  it("dispatches prerequisite installation before Nebula configuration", async () => {
+    const liveLikeConfig: AppConfig = { ...config, infrastructureMode: "pulumi" };
+    const { app, operations, store } = await setup(new FakeInfrastructureAdapter(), liveLikeConfig);
+    const managed = spec("Managed prerequisites");
+    managed.nodes = [{ key: "relay", name: "Relay", roles: ["lighthouse"], source: { kind: "aws", instanceType: "t3.small", architecture: "amd64", publicEndpoint: true } }];
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: managed } })).json();
+    const plan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": "plan-prerequisites-0001" } })).json();
+    for (let turn = 0; turn < 3; turn += 1) await operations.advance(plan.id);
+    const apply = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": "apply-prerequisites-0001" }, payload: { planOperationId: plan.id } })).json();
+    await operations.advance(apply.id); await operations.advance(apply.id);
+    const node = (await store.listNodes(environment.id))[0]!; await store.patchNode(node.id, { lifecycle: "active", health: "online" });
+    await operations.advance(apply.id); await operations.advance(apply.id);
+    const operation = await store.getOperation(apply.id);
+    expect(operation?.steps.map(({ key }) => key)).toEqual(["verify_plan", "apply_infrastructure", "await_nodes", "prepare_nodes", "configure_network", "deploy_workloads", "verify_health"]);
+    expect([...store.commands.values()][0]).toMatchObject({ kind: "EnsurePrerequisites", payload: { docker: true, nebula: true } });
+    expect(operation?.steps.find(({ key }) => key === "prepare_nodes")?.state).toBe("waiting");
+    expect(operation?.steps.find(({ key }) => key === "configure_network")?.state).toBe("pending");
+  });
+
+  it("mints managed enrollment only for new or replacement instances", async () => {
+    class CapturingAdapter extends FakeInfrastructureAdapter { readonly inputs: ApplyInput[] = []; override async apply(input: ApplyInput): Promise<ApplyResult> { this.inputs.push(structuredClone(input)); return super.apply(input); } }
+    const adapter = new CapturingAdapter(); const { app, operations, store } = await setup(adapter);
+    const managed = spec("Selective bootstrap"); managed.nodes = [{ key: "relay", name: "Relay", roles: ["lighthouse"], source: { kind: "aws", instanceType: "t3.small", architecture: "amd64", publicEndpoint: true } }];
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: managed } })).json();
+
+    const apply = async (suffix: string): Promise<void> => {
+      const plan = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/plan`, headers: { "idempotency-key": `plan-bootstrap-${suffix}` } })).json();
+      for (let turn = 0; turn < 3; turn += 1) await operations.advance(plan.id);
+      const operation = (await app.inject({ method: "POST", url: `/api/v1/environments/${environment.id}/apply`, headers: { "idempotency-key": `apply-bootstrap-${suffix}` }, payload: { planOperationId: plan.id } })).json();
+      for (let turn = 0; turn < 7; turn += 1) await operations.advance(operation.id);
+      expect((await store.getOperation(operation.id))?.state).toBe("succeeded");
+    };
+
+    await apply("initial-0001"); expect(adapter.inputs[0]?.agentBootstrap).toHaveProperty("relay");
+    await apply("unchanged-0001"); expect(adapter.inputs[1]?.agentBootstrap).toEqual({});
+
+    const current = await app.inject({ method: "GET", url: `/api/v1/environments/${environment.id}` });
+    const replacement = structuredClone(current.json().spec) as EnvironmentSpec;
+    const source = replacement.nodes[0]!.source; if (source.kind !== "aws") throw new Error("expected managed node"); source.instanceType = "t3.medium";
+    await app.inject({ method: "PUT", url: `/api/v1/environments/${environment.id}/spec`, headers: { "if-match": `"${current.json().etag}"` }, payload: { spec: replacement } });
+    await apply("replacement-0001"); expect(adapter.inputs[2]?.agentBootstrap).toHaveProperty("relay");
   });
 
   it("rejects a stale reviewed plan", async () => {
@@ -233,6 +294,22 @@ describe("workload admission", () => {
     const plan = await workloadService.plan(environmentSpec); expect(plan.blockers).toEqual([]);
     const materialized = await workloadService.materialize(environmentSpec, "11111111-1111-4111-8111-111111111111", 1, plan.resolutions);
     expect(materialized[0]?.payload).toMatchObject({ environmentId: "11111111-1111-4111-8111-111111111111", generation: 1, resolvedImages: { web: `docker.io/library/${image}` }, secretFiles: [], timeoutSeconds: 600 });
+  });
+
+  it("materializes stopped workloads as idempotent removal tasks", async () => {
+    const { app, store } = await setup();
+    const workload = (await app.inject({ method: "POST", url: "/api/v1/workloads", payload: { name: "paused relay" } })).json();
+    const image = `nginx@sha256:${"c".repeat(64)}`;
+    const version = (await app.inject({ method: "POST", url: `/api/v1/workloads/${workload.id}/versions`, payload: {
+      version: "1.0.0", composeYaml: `services:\n  relay:\n    image: ${image}\n`,
+      manifest: { schemaVersion: 1, inputsSchema: {}, secretFiles: [], endpoints: [], placement: { requiredRoles: [] }, probes: [] }
+    } })).json();
+    const credentials = new (await import("../src/services/credential-service.js")).CredentialService(store, config.encryptionKey);
+    const service = new (await import("../src/services/workload-service.js")).WorkloadService(store, credentials);
+    const environmentSpec = spec(); environmentSpec.deployments = [{ key: "paused", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }];
+    const plan = await service.plan(environmentSpec); const materialized = await service.materialize(environmentSpec, "11111111-1111-4111-8111-111111111111", 2, plan.resolutions);
+    expect(materialized[0]).toMatchObject({ desiredState: "stopped", payload: { removeOwnedVolumes: false } });
+    expect(materialized[0]?.payload).not.toHaveProperty("composeYaml");
   });
 
   it("resolves tags once, pins the reviewed digest, and hydrates relative secrets only at dispatch", async () => {
