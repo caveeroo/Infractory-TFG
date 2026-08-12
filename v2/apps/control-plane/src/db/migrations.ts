@@ -154,4 +154,16 @@ const credentialsAndWorkers: Migration = {
   async down(): Promise<void> { throw new Error("Forward-only migrations cannot be rolled back"); }
 };
 
-export const migrations: Record<string, Migration> = { "001_initial": initial, "002_network_authorities": networkAuthorities, "003_credentials_workers": credentialsAndWorkers };
+const reusableEnvironmentRevisionDigests: Migration = {
+  async up(db: Kysely<unknown>): Promise<void> {
+    await sql`alter table environment_revisions drop constraint environment_revisions_environment_id_digest_key`.execute(db);
+  },
+  async down(): Promise<void> { throw new Error("Forward-only migrations cannot be rolled back"); }
+};
+
+export const migrations: Record<string, Migration> = {
+  "001_initial": initial,
+  "002_network_authorities": networkAuthorities,
+  "003_credentials_workers": credentialsAndWorkers,
+  "004_reusable_environment_revision_digests": reusableEnvironmentRevisionDigests
+};

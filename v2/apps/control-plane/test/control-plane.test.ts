@@ -294,6 +294,26 @@ describe("agent trust lifecycle", () => {
     expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${rotated.json().deviceToken}` }, payload: { generation: 0, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(401);
   });
 
+  it("accepts the last applied generation while desired node changes await apply", async () => {
+    const { app, store, operations } = await setup();
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: spec() } })).json();
+    const node = (await store.listNodes(environment.id))[0]!; const enrollment = await operations.createEnrollment(environment.id, node.id);
+    const enrolled = await app.inject({ method: "POST", url: "/agent/v1/enroll", payload: { token: enrollment.token, publicKey: "A".repeat(64), capabilities } });
+    const token = enrolled.json().deviceToken as string;
+    const changed = spec(); changed.nodes[0]!.roles = ["lighthouse"];
+    await app.inject({ method: "PUT", url: `/api/v1/environments/${environment.id}/spec`, headers: { "if-match": `"${environment.etag}"` }, payload: { spec: changed } });
+
+    const priorGeneration = await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 0, agentVersion: "0.1.0", capabilities, observation: {} } });
+    expect(priorGeneration.statusCode).toBe(204);
+    expect(await store.getNode(node.id)).toMatchObject({ generation: 1, health: "degraded" });
+    expect((await store.getObservation(node.id))?.generation).toBe(0);
+
+    const futureGeneration = await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 2, agentVersion: "0.1.0", capabilities, observation: {} } });
+    expect(futureGeneration.statusCode).toBe(409);
+    expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 1, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(204);
+    expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 0, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(409);
+  });
+
   it("does not leave stale observations green", async () => {
     const { app, store } = await setup();
     const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: spec() } })).json();

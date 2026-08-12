@@ -43,10 +43,13 @@ export class AgentService {
 
   async heartbeat(nodeId: string, input: HeartbeatRequest): Promise<void> {
     const node = await this.store.getNode(nodeId); if (!node) throw unauthorized();
-    if (input.generation !== node.generation) throw conflict("stale_node_generation", `Agent generation ${input.generation} does not match desired generation ${node.generation}`);
+    const previous = await this.store.getObservation(nodeId);
+    if (input.generation > node.generation || (previous !== null && input.generation < previous.generation)) {
+      throw conflict("stale_node_generation", `Agent generation ${input.generation} is outside the accepted range ${previous?.generation ?? 0}-${node.generation}`);
+    }
     const observedAt = new Date().toISOString();
     await this.store.saveObservation(nodeId, { nodeId, generation: input.generation, agentVersion: input.agentVersion, capabilities: input.capabilities, observation: input.observation, observedAt });
-    if (!input.capabilities.ntpSynchronized || input.capabilities.clockOffsetSeconds === null || Math.abs(input.capabilities.clockOffsetSeconds) > 5) await this.store.patchNode(nodeId, { health: "degraded" });
+    if (input.generation < node.generation || !input.capabilities.ntpSynchronized || input.capabilities.clockOffsetSeconds === null || Math.abs(input.capabilities.clockOffsetSeconds) > 5) await this.store.patchNode(nodeId, { health: "degraded" });
   }
 
   async nextTask(nodeId: string, waitSeconds: number): Promise<AgentTask | null> {
