@@ -23,7 +23,8 @@ export class AgentService {
     if (!enrollment) throw unauthorized();
     const node = await this.store.getNode(enrollment.nodeId); if (!node) throw notFound("Enrollment node");
     await this.store.patchNode(node.id, { lifecycle: "active", health: "online", lastSeenAt: now.toISOString() });
-    await this.store.saveObservation(node.id, { nodeId: node.id, generation: node.generation, agentVersion: "enrolling", capabilities: input.capabilities, observation: { publicKey: input.publicKey }, observedAt: now.toISOString() });
+    await this.store.saveObservation(node.id, { nodeId: node.id, generation: 0, agentVersion: "enrolling", capabilities: input.capabilities, observation: { publicKey: input.publicKey }, observedAt: now.toISOString() });
+    if (node.generation > 0) await this.store.patchNode(node.id, { health: "degraded" });
     return { nodeId: node.id, deviceToken, expiresAt, heartbeatIntervalSeconds: 15 };
   }
 

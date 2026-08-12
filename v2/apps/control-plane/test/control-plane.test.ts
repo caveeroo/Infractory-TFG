@@ -170,7 +170,7 @@ describe("durable environment workflow", () => {
     expect(adapter.inputs[1]?.agentBootstrap).toEqual({});
   });
 
-  it("dispatches stopped workload removals before waiting for running workload applies", async () => {
+  it("dispatches distinct workload commands per deployment and removes before applying", async () => {
     const liveLikeConfig: AppConfig = { ...config, infrastructureMode: "pulumi" };
     const { app, operations, store } = await setup(new FakeInfrastructureAdapter(), liveLikeConfig);
     const workload = (await app.inject({ method: "POST", url: "/api/v1/workloads", payload: { name: "mixed deployment" } })).json();
@@ -180,8 +180,10 @@ describe("durable environment workflow", () => {
       manifest: { schemaVersion: 1, inputsSchema: {}, secretFiles: [], endpoints: [], placement: { requiredRoles: [] }, probes: [] }
     } })).json();
     const desired = spec("Mixed deployment"); desired.deployments = [
-      { key: "running", nodeKey: "relay", workloadVersionId: version.id, desiredState: "running", dependsOn: [], inputs: {}, exposures: [] },
-      { key: "stopped", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }
+      { key: "running-one", nodeKey: "relay", workloadVersionId: version.id, desiredState: "running", dependsOn: [], inputs: {}, exposures: [] },
+      { key: "running-two", nodeKey: "relay", workloadVersionId: version.id, desiredState: "running", dependsOn: [], inputs: {}, exposures: [] },
+      { key: "stopped-one", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] },
+      { key: "stopped-two", nodeKey: "relay", workloadVersionId: version.id, desiredState: "stopped", dependsOn: [], inputs: {}, exposures: [] }
     ];
     const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: desired } })).json();
     const node = (await store.listNodes(environment.id))[0]!; await store.patchNode(node.id, { lifecycle: "active", health: "online" });
@@ -192,10 +194,14 @@ describe("durable environment workflow", () => {
     for (const step of operation!.steps.filter(({ key }) => key !== "deploy_workloads" && key !== "verify_health")) await store.patchStep(operation!.id, step.id, { state: "succeeded", finishedAt: new Date().toISOString() });
 
     await operations.advance(apply.id);
-    expect([...store.commands.values()].map(({ kind }) => kind)).toEqual(["RemoveWorkload"]);
-    const removal = [...store.commands.values()][0]!; removal.state = "succeeded";
+    const removals = [...store.commands.values()];
+    expect(removals.map(({ kind }) => kind)).toEqual(["RemoveWorkload", "RemoveWorkload"]);
+    expect(new Set(removals.map(({ actionKey }) => actionKey)).size).toBe(2);
+    for (const removal of removals) removal.state = "succeeded";
     await operations.advance(apply.id);
-    expect([...store.commands.values()].map(({ kind }) => kind)).toEqual(["RemoveWorkload", "ApplyWorkload"]);
+    const commands = [...store.commands.values()];
+    expect(commands.map(({ kind }) => kind)).toEqual(["RemoveWorkload", "RemoveWorkload", "ApplyWorkload", "ApplyWorkload"]);
+    expect(new Set(commands.map(({ actionKey }) => actionKey)).size).toBe(4);
   });
 
   it("rejects a stale reviewed plan", async () => {
@@ -312,6 +318,19 @@ describe("agent trust lifecycle", () => {
     expect(futureGeneration.statusCode).toBe(409);
     expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 1, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(204);
     expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${token}` }, payload: { generation: 0, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(409);
+  });
+
+  it("seeds a re-enrolled agent at its actual generation zero", async () => {
+    const { app, store, operations } = await setup();
+    const environment = (await app.inject({ method: "POST", url: "/api/v1/environments", payload: { spec: spec() } })).json();
+    const node = (await store.listNodes(environment.id))[0]!;
+    await store.patchNode(node.id, { generation: 2, lifecycle: "pending", health: "unknown", lastSeenAt: null });
+    const enrollment = await operations.createEnrollment(environment.id, node.id);
+    const enrolled = await app.inject({ method: "POST", url: "/agent/v1/enroll", payload: { token: enrollment.token, publicKey: "A".repeat(64), capabilities } });
+    expect(enrolled.statusCode).toBe(200);
+    expect((await store.getObservation(node.id))?.generation).toBe(0);
+    expect(await store.getNode(node.id)).toMatchObject({ generation: 2, lifecycle: "active", health: "degraded" });
+    expect((await app.inject({ method: "POST", url: "/agent/v1/heartbeat", headers: { authorization: `Bearer ${enrolled.json().deviceToken}` }, payload: { generation: 0, agentVersion: "0.1.0", capabilities, observation: {} } })).statusCode).toBe(204);
   });
 
   it("does not leave stale observations green", async () => {
